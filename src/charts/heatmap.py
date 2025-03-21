@@ -24,13 +24,13 @@ PERIOD = {"byFrom": "days", "fromValue": 30}
 def create_choropleth_map():
     """Create a world choropleth map using Cartopy."""
 
-    with open('data/transient/host_counts_by_country.json', 'r') as f:
+    with open('../../data/transient/host_counts_by_country.json', 'r') as f:
         host_counts_by_country = json.load(f)
 
-    with open('data/country_name_abbreviations.json', 'r') as f:
+    with open('../../data/country_name_abbreviations.json', 'r') as f:
         country_name_abbreviations = json.load(f)
 
-    with open('data/x_cartopy_country_name_mapping.json', 'r') as f:
+    with open('../../data/x_cartopy_country_name_mapping.json', 'r') as f:
         x_cartopy_country_name_mapping = json.load(f)
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.ticket_type_prefix)

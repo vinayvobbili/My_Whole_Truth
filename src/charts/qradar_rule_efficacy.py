@@ -12,7 +12,7 @@ from matplotlib import transforms
 from webexpythonsdk import WebexAPI
 
 from config import get_config
-from helper_methods import impact_colors
+from src.data_maps import impact_colors
 from services.xsoar import IncidentFetcher
 
 # Configure logging
@@ -22,8 +22,8 @@ log = logging.getLogger(__name__)
 # Constants
 EASTERN_TZ = pytz.timezone('US/Eastern')
 CONFIG = get_config()
-DATA_DIR = 'data'
-OUTPUT_DIR = 'web/static/charts'
+DATA_DIR = '../../data'
+OUTPUT_DIR = '../../web/static/charts'
 RULE_ABBR_FILE = os.path.join(DATA_DIR, 'rule_name_abbreviations.json')
 
 # Ensure directories exist
