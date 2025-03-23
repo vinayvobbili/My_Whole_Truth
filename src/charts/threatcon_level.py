@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrow
 
-THREAT_CON_FILE = "../data/transient/secOps/threatcon.json"
+THREAT_CON_FILE = "../../data/transient/secOps/threatcon.json"
 
 
 def gauge(color):
@@ -85,10 +85,9 @@ def gauge(color):
 
     # Configure plot
     ax.set_aspect('equal')
-    # ax.axis('off') #removed this line
-    ax.set_ylim(bottom=0)  # added this line
-    ax.set_xlim([-1.1, 1.1])  # added this line
-    ax.axis('off')  # added this line
+    ax.set_ylim(bottom=0)
+    ax.set_xlim([-1.1, 1.1])
+    ax.axis('off')
     plt.tight_layout()
 
     # --- Add Text Table based on the attachment ---
@@ -102,39 +101,51 @@ def gauge(color):
     ]
 
     # Create a table at the bottom of the chart
-    table = plt.table(
+    definitions_table = plt.table(
         cellText=threat_details[1:],  # Skip the header row for cell text
         colLabels=threat_details[0],  # Use the header row for column labels
-        cellLoc='left',
         loc='bottom',
-        bbox=[0.0, -0.65, 1.0, 0.3],  # Adjust position and size as needed
-        colWidths=[0.2, 0.8]  # Set the column widths - 20% for Level, 80% for Description
+        bbox=[0.05, -0.5, 0.9, 0.3],  # Adjust position and size as needed
+        colWidths=[0.15, 0.85]  # Set the column widths - 12% for Level, 88% for Description
     )
 
     # Style the table
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    definitions_table.auto_set_font_size(False)
+    definitions_table.set_fontsize(10)
 
     # Apply colors to the cells
-    table.get_celld()[(0, 0)].set_facecolor('#3366CC')  # Header background
-    table.get_celld()[(0, 1)].set_facecolor('#3366CC')  # Header background
-    table.get_celld()[(0, 0)].set_text_props(color='white')  # Header text color
-    table.get_celld()[(0, 1)].set_text_props(color='white')  # Header text color
+    definitions_table.get_celld()[(0, 0)].set_facecolor('#3366CC')  # Header background
+    definitions_table.get_celld()[(0, 1)].set_facecolor('#3366CC')  # Header background
+    definitions_table.get_celld()[(0, 0)].set_text_props(color='white')  # Header text color
+    definitions_table.get_celld()[(0, 1)].set_text_props(color='white')  # Header text color
 
     # Color the level cells according to the threat level
-    table.get_celld()[(1, 0)].set_facecolor('#006400')  # Dark GREEN
-    table.get_celld()[(2, 0)].set_facecolor('#FFD700')  # Dark YELLOW
-    table.get_celld()[(3, 0)].set_facecolor('#FF8C00')  # Dark ORANGE
-    table.get_celld()[(4, 0)].set_facecolor('#8B0000')  # Dark RED
+    definitions_table.get_celld()[(1, 0)].set_facecolor('#006400')  # Dark GREEN
+    definitions_table.get_celld()[(2, 0)].set_facecolor('#FFD700')  # Dark YELLOW
+    definitions_table.get_celld()[(3, 0)].set_facecolor('#FF8C00')  # Dark ORANGE
+    definitions_table.get_celld()[(4, 0)].set_facecolor('#8B0000')  # Dark RED
 
     # Set the description cell backgrounds
-    table.get_celld()[(1, 1)].set_facecolor('#B3FFB3')  # Light green
-    table.get_celld()[(2, 1)].set_facecolor('#FFFFB3')  # Light yellow
-    table.get_celld()[(3, 1)].set_facecolor('#FFCC99')  # Light orange
-    table.get_celld()[(4, 1)].set_facecolor('#FFB3B3')  # Light red
+    definitions_table.get_celld()[(1, 1)].set_facecolor('#B3FFB3')  # Light green
+    definitions_table.get_celld()[(2, 1)].set_facecolor('#FFFFB3')  # Light yellow
+    definitions_table.get_celld()[(3, 1)].set_facecolor('#FFCC99')  # Light orange
+    definitions_table.get_celld()[(4, 1)].set_facecolor('#FFB3B3')  # Light red
+
+    # Explicitly set cell alignment for each cell
+    for i in range(1, 5):
+        # Set Level column to center
+        definitions_table.get_celld()[(i, 0)].set_text_props(ha='left')
+        # Set Description column to left align with minimal padding
+        definitions_table.get_celld()[(i, 1)].set_text_props(ha='left')
+        # Add specific padding control for description column
+        definitions_table.get_celld()[(i, 1)].PAD = 0.02
+
+    # Also set header alignment
+    definitions_table.get_celld()[(0, 0)].set_text_props(ha='center')
+    definitions_table.get_celld()[(0, 1)].set_text_props(ha='center')  # Keep header centered
 
     # Adjust the table scale
-    table.scale(1, 1.5)
+    definitions_table.scale(1, 1.5)
 
     return fig
 
@@ -155,7 +166,7 @@ def make_chart():
     fig.patch.set_edgecolor('black')
     fig.patch.set_linewidth(5)
 
-    fig.savefig('web/static/charts/Threatcon Level.png', format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    fig.savefig('../../web/static/charts/Threatcon Level.png', format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
     plt.close()
 
 
