@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrow
@@ -230,6 +231,32 @@ def create_definitions_table(plt):
     return definitions_table
 
 
+# Add title with a fancier style
+def add_fancy_title(ax):
+    """
+    Add a fancy title to the gauge chart.
+    """
+    current_date = datetime.today().strftime("%m/%d/%Y")
+    title_text = f'Threatcon Level - {current_date}'
+
+    # Create a fancy title with gradient effect and shadow
+    ax.text(0, 1.2, title_text,
+            ha='center', va='center',
+            fontsize=12, fontweight='bold',
+            fontname='Arial Black',  # More impactful font
+            color='#003366',  # Navy blue for corporate feel
+            bbox=dict(
+                boxstyle="round,pad=0.6",
+                ec=(0.1, 0.1, 0.1, 0.9),  # Dark edge
+                fc=(0.9, 0.9, 0.95, 0.7),  # Light blue background with transparency
+                lw=2
+            ),
+            path_effects=[
+                plt.matplotlib.patheffects.withStroke(linewidth=2, foreground='#8a8a8a')  # Add shadow effect
+            ]
+            )
+
+
 def gauge(threatcon_details):
     """
     Creates a gauge chart representing the threat level.
@@ -251,12 +278,7 @@ def gauge(threatcon_details):
     # Add the needle based on threat level
     add_gauge_needle(ax, threatcon_details['level'])
 
-    # Add title
-    current_date = datetime.today().strftime("%m/%d/%Y")
-    ax.text(0, 1.2, f'Threatcon Level - {current_date}',
-            ha='center', va='center',
-            fontsize=14, fontweight='bold',
-            fontname='Arial')
+    add_fancy_title(ax)
 
     # Add reason text if needed
     add_reason_text(fig, threatcon_details)
