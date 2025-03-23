@@ -8,19 +8,23 @@ from matplotlib.patches import FancyArrow
 THREAT_CON_FILE = "../../data/transient/secOps/threatcon.json"
 
 
-def gauge(color):
+def gauge(threatcon_details):
     """
     Creates a gauge chart representing the threat level.
 
     Args:
-        color (str): The color representing the threat level ('red', 'orange', 'yellow', 'green').
+        threatcon_details (json): The color representing the threat level ('red', 'orange', 'yellow', 'green'). And the reason for that color
 
     Returns:
         matplotlib.figure.Figure: The generated gauge chart figure.
     """
+
+    threatcon_color = threatcon_details['level']
+    reason = threatcon_details['reason']
+
     # Create figure and axis
     rad_angle = 0
-    fig, ax = plt.subplots(figsize=(8, 6))  # Increased figure height to accommodate table
+    fig, ax = plt.subplots(figsize=(8, 6))
 
     # Set the gauge range
     angles = np.linspace(0, 180)
@@ -48,13 +52,13 @@ def gauge(color):
             color='#006400', linewidth=20, zorder=1)  # Dark green
 
     # Add the arrow (needle)
-    if color == 'red':
+    if threatcon_color == 'red':
         rad_angle = np.radians(22.5)
-    elif color == 'orange':
+    elif threatcon_color == 'orange':
         rad_angle = np.radians(67.5)
-    elif color == 'yellow':
+    elif threatcon_color == 'yellow':
         rad_angle = np.radians(112.5)
-    elif color == 'green':
+    elif threatcon_color == 'green':
         rad_angle = np.radians(157.5)
 
     arrow_length = 0.80
@@ -90,8 +94,21 @@ def gauge(color):
     ax.axis('off')
     plt.tight_layout()
 
-    # --- Add Text Table based on the attachment ---
-    # Define the threat level details according to the attachment
+    if threatcon_color != 'green':
+        # Add Reason section on top of the gauge
+        reason_text = f"Reason: \n{reason}"
+        reason_font_color = 'black'
+        if threatcon_color == 'yellow':
+            reason_font_color = '#FFD700'
+        elif threatcon_color == 'orange':
+            reason_font_color = '#FF8C00'
+        elif threatcon_color == 'red':
+            reason_font_color = '#8B0000'
+
+        fig.text(0.2, 0.4, reason_text, ha='left', va='center', fontsize=10, color=reason_font_color,
+                 bbox=dict(facecolor='gray', edgecolor='black', boxstyle='round,pad=0.5', linewidth=1))
+
+    # Define the threat level details
     threat_details = [
         ["Level", "Description"],
         ["GREEN", "No known significant threats or on-going attacks"],
@@ -155,12 +172,9 @@ def make_chart():
     Generates the threat level gauge chart with the text table and saves it as an image.
     """
     with open(THREAT_CON_FILE, "r") as file:
-        threatcon_details = file.read()
+        threatcon_details = json.loads(file.read())
 
-    threatcon_details = json.loads(threatcon_details)
-    threat_level = threatcon_details.get('level', 'green')
-
-    fig = gauge(threat_level)
+    fig = gauge(threatcon_details)
 
     # Add a thin black border around the figure
     fig.patch.set_edgecolor('black')
