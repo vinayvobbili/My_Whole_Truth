@@ -1,6 +1,7 @@
 import base64
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytz
@@ -11,6 +12,9 @@ from config import get_config
 
 config = get_config()
 eastern = pytz.timezone('US/Eastern')
+
+root_directory = Path(__file__).parent.parent.parent
+OUTPUT_PATH = root_directory / "web" / "static" / "charts" / "RE Stories.png"
 
 
 class ADOWorkItemRetriever:
@@ -117,7 +121,7 @@ def make_chart():
 
         plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for better readability
         plt.tight_layout()  # Adjust layout to prevent labels from overlapping
-        plt.savefig('web/static/charts/RE Stories.png')
+        plt.savefig(OUTPUT_PATH)
         plt.close(fig)
 
     except requests.exceptions.RequestException as e:

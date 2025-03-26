@@ -19,7 +19,7 @@ QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" created:>={start} created:
 
 root_directory = Path(__file__).parent.parent.parent
 DETECTION_SOURCE_NAMES_ABBREVIATION_FILE = root_directory / 'data' / 'detection_source_name_abbreviations.json'
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / "Outflow.png"
+OUTPUT_PATH = root_directory / "web" / "static" / "charts" / "Inflow.png"
 
 with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
     detection_source_codes_by_name = json.load(f)
