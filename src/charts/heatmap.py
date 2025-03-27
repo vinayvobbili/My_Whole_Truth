@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -20,17 +21,22 @@ eastern = timezone('US/Eastern')
 QUERY_TEMPLATE = f'status:closed type:{config.ticket_type_prefix} -owner:""'
 PERIOD = {"byFrom": "days", "fromValue": 30}
 
+ROOT_DIRECTORY = Path(__file__).parent.parent.parent
+DATA_DIR = ROOT_DIRECTORY / 'data'
+
+OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / "Heat Map.png"
+
 
 def create_choropleth_map():
     """Create a world choropleth map using Cartopy."""
 
-    with open('../../data/transient/host_counts_by_country.json', 'r') as f:
+    with open(DATA_DIR / 'transient' / 'host_counts_by_country.json', 'r') as f:
         host_counts_by_country = json.load(f)
 
-    with open('../../data/country_name_abbreviations.json', 'r') as f:
+    with open(DATA_DIR / 'country_name_abbreviations.json', 'r') as f:
         country_name_abbreviations = json.load(f)
 
-    with open('../../data/x_cartopy_country_name_mapping.json', 'r') as f:
+    with open(DATA_DIR / 'x_cartopy_country_name_mapping.json', 'r') as f:
         x_cartopy_country_name_mapping = json.load(f)
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.ticket_type_prefix)
@@ -142,7 +148,7 @@ def create_choropleth_map():
     # Adjust layout to prevent label clipping
     plt.tight_layout()
 
-    plt.savefig('web/static/charts/Heat Map.png')
+    plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 
 
