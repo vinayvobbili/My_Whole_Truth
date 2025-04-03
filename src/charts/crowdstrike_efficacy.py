@@ -14,12 +14,12 @@ eastern = pytz.timezone('US/Eastern')
 CONFIG = get_config()
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / "Vectra Efficacy.png"
+OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / "CrowdStrike Efficacy.png"
 
 
 def generate_chart(tickets):
     """
-    Generates a combined chart showing Vectra efficacy and detections over time.
+    Generates a combined chart showing CrowdStrike efficacy and detections over time.
 
     Args:
         tickets (list): A list of ticket dictionaries.
@@ -31,7 +31,8 @@ def generate_chart(tickets):
     # Data Preparation
     try:
         df = pd.DataFrame(tickets)
-        df['creation_date'] = pd.to_datetime(df['created']).dt.strftime('%m/%d/%Y')
+        # Corrected line: Handle milliseconds in the timestamp
+        df['creation_date'] = pd.to_datetime(df['created'], format='ISO8601').dt.strftime('%m/%d/%Y')
         daily_counts = df.groupby('creation_date').size().reset_index(name='Ticket Count')
         df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact'))
         impact_counts = df.groupby(['creation_date', 'impact']).size().reset_index(name='count')
@@ -66,9 +67,9 @@ def generate_chart(tickets):
 
     # Create the figure and subplots
     fig, ax = plt.subplots(1, 1, figsize=(14, 12), sharex=True)
-    fig.suptitle(f'Vectra Efficacy ({len(tickets)} Tickets from past 3 months)', fontweight='bold', fontsize=14)
+    fig.suptitle(f'CrowdStrike Efficacy ({len(tickets)} Tickets from past 3 months)', fontweight='bold', fontsize=14)
 
-    # Stacked Bar Chart (Vectra Efficacy)
+    # Stacked Bar Chart (CrowdStrike Efficacy)
     bottom = [0] * len(daily_counts['creation_date'])
     for impact in sorted_impacts:
         counts = impact_data_dict[impact]
@@ -108,7 +109,7 @@ def make_chart(months_back=3):
         months_back (int): Number of months to look back for data.
     """
     try:
-        query = f'type:"{CONFIG.ticket_type_prefix} Vectra Detection" -owner:""'
+        query = f'(type:"{CONFIG.ticket_type_prefix} CrowdStrike Falcon Detection" or type:"{CONFIG.ticket_type_prefix} CrowdStrike Falcon Incident") -owner:""'
         period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": months_back}
 
         incident_fetcher = IncidentFetcher()
