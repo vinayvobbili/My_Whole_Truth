@@ -13,7 +13,7 @@ from matplotlib import transforms
 from webexpythonsdk import WebexAPI
 
 from config import get_config
-from services.xsoar import IncidentFetcher
+from services.xsoar import IncidentHandler
 from src.data_maps import impact_colors
 
 # Configure logging
@@ -44,7 +44,7 @@ class QRadarEfficacyChart:
     def __init__(self, ticket_type_prefix: str):
         """Initialize with ticket type prefix."""
         self.ticket_type_prefix = ticket_type_prefix
-        self.incident_fetcher = IncidentFetcher()
+        self.incident_fetcher = IncidentHandler()
 
     def get_tickets(self, period: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fetch tickets for the specified period."""

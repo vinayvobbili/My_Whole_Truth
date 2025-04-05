@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from pytz import timezone
 
 from config import get_config
-from services.xsoar import IncidentFetcher
+from services.xsoar import IncidentHandler
 
 config = get_config()
 eastern = timezone('US/Eastern')  # Define the Eastern time zone
@@ -186,7 +186,7 @@ def make_chart():
         "fromValue": 1
     }
 
-    incident_fetcher = IncidentFetcher()
+    incident_fetcher = IncidentHandler()
     tickets = incident_fetcher.get_tickets(query=query, period=period)
     tickets_by_periods = get_tickets_by_periods(tickets)
     save_mttr_mttc_chart(tickets_by_periods)
