@@ -32,8 +32,6 @@ webex = WebexAPI(access_token=CONFIG.webex_bot_access_token_moneyball)
 # Load rule name abbreviations
 root_directory = Path(__file__).parent.parent.parent
 QR_RULE_NAMES_ABBREVIATION_FILE = root_directory / 'data' / 'rule_name_abbreviations.json'
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
 
 with open(QR_RULE_NAMES_ABBREVIATION_FILE, 'r') as f:
     rule_name_abbreviations = json.load(f)
@@ -166,6 +164,8 @@ class QRadarEfficacyChart:
         fig.patch.set_linewidth(5)
 
         # Save the chart
+        today_date = datetime.now().strftime('%m-%d-%Y')
+        OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         plt.tight_layout()
         plt.savefig(output_path)
@@ -238,6 +238,8 @@ def send_charts() -> None:
     """Send chart via Webex."""
     recipient_email = CONFIG.qradar_efficacy_chart_receiver
     files = ['QR Rule Efficacy-Quarter.png', 'QR Rule Efficacy-Month.png', 'QR Rule Efficacy-Week.png']
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
     try:
         for file in files:
             webex.messages.create(toPersonEmail=recipient_email, files=[f'{OUTPUT_DIR / file}'])

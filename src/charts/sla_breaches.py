@@ -14,8 +14,6 @@ eastern = timezone('US/Eastern')
 config = get_config()
 
 root_directory = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "SLA Breaches.png"
 
 
 @dataclass
@@ -143,6 +141,8 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
     # Adjust layout to prevent label clipping
     plt.tight_layout()
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "SLA Breaches.png"
     plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 

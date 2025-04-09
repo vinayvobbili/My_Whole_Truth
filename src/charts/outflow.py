@@ -21,8 +21,6 @@ config = get_config()
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 DETECTION_SOURCE_NAMES_ABBREVIATION_FILE = ROOT_DIRECTORY / 'data' / 'detection_source_name_abbreviations.json'
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
 
 with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
     detection_source_codes_by_name = json.load(f)
@@ -186,6 +184,9 @@ def create_graph(tickets):
 
     # Adjust layout
     plt.tight_layout()
+
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
     plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 

@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
@@ -14,8 +15,6 @@ eastern = pytz.timezone('US/Eastern')
 CONFIG = get_config()
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "CrowdStrike Volume.png"
 
 
 def generate_chart(tickets):
@@ -33,7 +32,7 @@ def generate_chart(tickets):
     try:
         df = pd.DataFrame(tickets)
         # Corrected line: Handle milliseconds in the timestamp
-        df['creation_date'] = pd.to_datetime(df['created'], format='ISO8601').dt.strftime('%m/%d/%Y')
+        df['creation_date'] = pd.to_datetime(df['created'], format='ISO8601')
         daily_counts = df.groupby('creation_date').size().reset_index(name='Ticket Count')
         df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact'))
         impact_counts = df.groupby(['creation_date', 'impact']).size().reset_index(name='count')
@@ -97,6 +96,7 @@ def generate_chart(tickets):
         ax.legend()
 
     # Customize the chart
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
     plt.xticks(rotation=90)
     fig.patch.set_edgecolor('black')
     fig.patch.set_linewidth(5)
@@ -110,6 +110,9 @@ def generate_chart(tickets):
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
     plt.tight_layout()
+
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "CrowdStrike Volume.png"
     plt.savefig(OUTPUT_PATH)
     plt.close()
 

@@ -23,8 +23,6 @@ PERIOD = {"byFrom": "days", "fromValue": 30}
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 DATA_DIR = ROOT_DIRECTORY / 'data'
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Heat Map.png"
 
 
 def create_choropleth_map():
@@ -148,6 +146,8 @@ def create_choropleth_map():
     # Adjust layout to prevent label clipping
     plt.tight_layout()
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Heat Map.png"
     plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 

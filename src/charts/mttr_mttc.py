@@ -14,8 +14,6 @@ config = get_config()
 eastern = timezone('US/Eastern')  # Define the Eastern time zone
 
 root_directory = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "MTTR MTTC.png"
 
 
 @dataclass
@@ -175,6 +173,8 @@ def save_mttr_mttc_chart(ticket_slas_by_periods):
     # Adjust layout to prevent label clipping
     plt.tight_layout()
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "MTTR MTTC.png"
     plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 

@@ -9,8 +9,6 @@ from matplotlib.patches import FancyArrow
 
 # Define constants
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Threatcon Level.png"
 THREAT_CON_FILE = ROOT_DIRECTORY / "data" / "transient" / "secOps" / "threatcon.json"
 
 # Define color mappings for better maintenance
@@ -306,8 +304,6 @@ def make_chart():
         ValueError: If there's an issue with the threatcon data.
     """
     try:
-        # Ensure output directory exists
-        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
         # Load the threatcon data
         threatcon_details = load_threatcon_data(THREAT_CON_FILE)
@@ -320,6 +316,8 @@ def make_chart():
         fig.patch.set_linewidth(5)
 
         # Save the figure
+        today_date = datetime.now().strftime('%m-%d-%Y')
+        OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Threatcon Level.png"
         fig.savefig(OUTPUT_PATH, format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
         plt.close()
 

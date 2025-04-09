@@ -14,8 +14,6 @@ config = get_config()
 eastern = pytz.timezone('US/Eastern')
 
 root_directory = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "RE Stories.png"
 
 
 class ADOWorkItemRetriever:
@@ -122,6 +120,9 @@ def make_chart():
 
         plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for better readability
         plt.tight_layout()  # Adjust layout to prevent labels from overlapping
+
+        today_date = datetime.now().strftime('%m-%d-%Y')
+        OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "RE Stories.png"
         plt.savefig(OUTPUT_PATH)
         plt.close(fig)
 

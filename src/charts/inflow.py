@@ -19,8 +19,6 @@ QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" created:>={start} created:
 
 root_directory = Path(__file__).parent.parent.parent
 DETECTION_SOURCE_NAMES_ABBREVIATION_FILE = root_directory / 'data' / 'detection_source_name_abbreviations.json'
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Inflow.png"
 
 with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
     detection_source_codes_by_name = json.load(f)
@@ -108,6 +106,8 @@ def make_chart():
     trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
     plt.text(0.08, 0.03, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Inflow.png"
     fig.savefig(OUTPUT_PATH)
     plt.close(fig)
 

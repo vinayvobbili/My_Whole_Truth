@@ -25,8 +25,6 @@ webex_headers = {
 eastern = pytz.timezone('US/Eastern')
 
 root_directory = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Aging Tickets.png"
 
 
 def get_df(tickets: List[Dict[Any, Any]]) -> pd.DataFrame:
@@ -112,6 +110,8 @@ def generate_plot(tickets):
     plt.legend(title='Phase', loc='upper right')
     plt.tight_layout()
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Aging Tickets.png"
     plt.savefig(OUTPUT_PATH)
     plt.close(fig)
 

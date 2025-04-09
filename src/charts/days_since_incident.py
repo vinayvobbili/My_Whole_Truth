@@ -14,8 +14,6 @@ eastern = pytz.timezone('US/Eastern')
 config = config.get_config()
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
-today_date = datetime.now().strftime('%m-%d-%Y')
-OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Days Since Last Incident.png"
 BASE_IMAGE_PATH = ROOT_DIRECTORY / "web" / "static" / "images" / "base" / "Days Since Last Incident.jpg"
 
 
@@ -163,6 +161,8 @@ def make_chart():
     modifier = CounterImageModifier()
     days_since_last_incident, last_incident_date, last_incident_id = get_last_incident_details()
 
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Days Since Last Incident.png"
     try:
         modifier.update_counter(
             BASE_IMAGE_PATH,
