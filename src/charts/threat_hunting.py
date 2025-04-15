@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -153,12 +154,17 @@ def generate_threat_hunt_report(hunt_details):
     today_date = datetime.now().strftime('%m-%d-%Y')
     OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date
     os.makedirs(OUTPUT_PATH, exist_ok=True)
-    plt.savefig(OUTPUT_PATH / 'weekly_threat_hunts_legend_counts.png', dpi=300, bbox_inches='tight')
+    plt.savefig(OUTPUT_PATH / 'Threat Hunts.png', dpi=300, bbox_inches='tight')
+
+
+def make_chart():
+    try:
+        hunt_details = azdo.get_stories_from_area_path("Detection-Engineering\\DE Rules\\Threat Hunting")
+        # Generate the report
+        generate_threat_hunt_report(hunt_details)
+    except Exception as e:
+        logging.error(f"An error occurred while generating the chart: {e}")
 
 
 if __name__ == "__main__":
-    # Get hunt details from Azure DevOps
-    hunt_details = azdo.get_stories_from_area_path("Detection-Engineering\\DE Rules\\Threat Hunting")
-
-    # Generate the report
-    generate_threat_hunt_report(hunt_details)
+    make_chart()
