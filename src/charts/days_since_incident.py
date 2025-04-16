@@ -121,7 +121,6 @@ class CounterImageModifier:
             output_path = output_path or image_path
             img.save(output_path, quality=95)
 
-            self.logger.info(f"Successfully updated counter to {days_since_last_incident}")
             return output_path
 
         except Exception as e:

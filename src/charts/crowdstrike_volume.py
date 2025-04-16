@@ -131,7 +131,6 @@ def make_chart(months_back=3):
         incident_fetcher = IncidentHandler()
         tickets = incident_fetcher.get_tickets(query, period)
 
-        print(f"Retrieved {len(tickets)} tickets")
         generate_chart(tickets)
 
     except Exception as e:

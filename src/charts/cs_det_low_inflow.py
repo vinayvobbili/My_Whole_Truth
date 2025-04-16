@@ -7,6 +7,7 @@ import pytz
 from matplotlib import transforms
 
 from config import get_config
+from services.xsoar import IncidentHandler
 
 eastern = pytz.timezone('US/Eastern')
 
@@ -122,10 +123,9 @@ def make_chart(months_back=3):
         query = f'type:"{CONFIG.ticket_type_prefix} CrowdStrike Falcon Detection" -owner:""'
         period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": months_back}
 
-        incident_fetcher = IncidentFetcher()
+        incident_fetcher = IncidentHandler()
         tickets = incident_fetcher.get_tickets(query, period)
 
-        print(f"Retrieved {len(tickets)} tickets")
         generate_chart(tickets)
 
     except Exception as e:

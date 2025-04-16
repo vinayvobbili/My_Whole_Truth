@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pytz
 from matplotlib import transforms
@@ -57,7 +58,7 @@ def create_stacked_bar_chart(df, x_label, y_label, title):
     return fig
 
 
-def make_chart():
+def plot_yesterday():
     """Plots the ticket inflow by source."""
 
     # Calculate fresh values EACH TIME the command is run
@@ -107,9 +108,117 @@ def make_chart():
     plt.text(0.08, 0.03, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Inflow.png"
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Inflow Yesterday.png"
     fig.savefig(OUTPUT_PATH)
     plt.close(fig)
+
+
+def plot_past_60_days():
+    query = f'type:{config.ticket_type_prefix}'
+    period = {"byTo": "days", "toValue": None, "byFrom": "days", "fromValue": 60}
+    tickets = IncidentHandler().get_tickets(query=query, period=period)
+
+    if not tickets:
+        print("No tickets found for the past 60 days.")
+        return
+
+    df = pd.DataFrame(tickets)
+
+    # Extract 'created_date' and 'impact' fields
+    df['created_date'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.date
+    df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
+
+    # Group by 'created_date' and 'impact', then count occurrences
+    date_impact_counts = df.groupby(['created_date', 'impact'], observed=True).size().reset_index(name='count')
+
+    # Define custom order and colors
+    CUSTOM_IMPACT_ORDER = ["Significant", "Confirmed", "Detected", "Prevented", "Ignore", "Testing", "False Positive"]
+    impact_colors = {
+        "Significant": "#ff0000",  # Red
+        "Confirmed": "#ffa500",  # Orange
+        "Detected": "#ffd700",  # Gold
+        "Prevented": "#008000",  # Green
+        "Ignore": "#808080",  # Gray
+        "Testing": "#add8e6",  # Light Blue
+        "False Positive": "#90ee90",  # Light green
+    }
+
+    # Ensure impacts follow the custom order
+    date_impact_counts['impact'] = pd.Categorical(date_impact_counts['impact'], categories=CUSTOM_IMPACT_ORDER, ordered=True)
+
+    # Instead of using pivot_table (which might trigger the warning),
+    # We'll manually create the pivot data structure
+    # First, sort by date and get unique dates
+    unique_dates = sorted(date_impact_counts['created_date'].unique())
+
+    # Create a dict to hold our data
+    pivot_data = {impact: np.zeros(len(unique_dates)) for impact in CUSTOM_IMPACT_ORDER}
+
+    # Fill in the values
+    for _, row in date_impact_counts.iterrows():
+        date_idx = list(unique_dates).index(row['created_date'])
+        impact = row['impact']
+        count = row['count']
+        if impact in pivot_data:
+            pivot_data[impact][date_idx] += count
+
+    # Create a figure with proper size
+    fig, ax = plt.subplots(figsize=(16, 8))
+
+    # Get dates and format them for display
+    dates = [date.strftime('%m/%d') for date in unique_dates]
+
+    # Get position indices for the x-axis
+    x = np.arange(len(dates))
+
+    # Plot each impact category as a separate bar component
+    bottom = np.zeros(len(dates))
+    for impact in CUSTOM_IMPACT_ORDER:
+        values = pivot_data[impact]
+        ax.bar(x, values, bottom=bottom, label=impact, color=impact_colors.get(impact, '#000000'))
+        bottom += values
+
+    # Set x-ticks at the correct positions
+    ax.set_xticks(x)
+
+    # Show only every nth label to prevent crowding
+    n = 5  # Show every 5th label
+    date_labels = dates.copy()
+    for i in range(len(dates)):
+        if i % n != 0:
+            date_labels[i] = ""
+
+    ax.set_xticklabels(date_labels, rotation=45, ha='right', fontsize=8)
+
+    # Add labels and title
+    ax.set_xlabel("Created Date", fontweight='bold', fontsize=10)
+    ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=10)
+    ax.set_title("Ticket Inflow Over the Past 60 Days", fontweight='bold', fontsize=12)
+
+    # Add grid lines for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Add legend
+    ax.legend(title='impact')
+
+    # Save the chart
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Inflow Past 60 Days.png"
+
+    # Ensure directory exists
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    plt.tight_layout()
+    fig.savefig(OUTPUT_PATH)
+    plt.close(fig)
+
+
+def make_chart():
+    try:
+        plot_yesterday()
+        plot_past_60_days()
+    except Exception as e:
+        print(f"An error occurred while generating charts: {e}")
 
 
 if __name__ == '__main__':

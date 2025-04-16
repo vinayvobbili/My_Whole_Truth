@@ -321,8 +321,6 @@ def make_chart():
         fig.savefig(OUTPUT_PATH, format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
         plt.close()
 
-        print(f"Threatcon chart successfully generated at {OUTPUT_PATH}")
-
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
         print(f"Error generating threatcon chart: {e}")
 
