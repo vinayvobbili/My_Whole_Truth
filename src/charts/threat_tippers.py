@@ -84,7 +84,7 @@ def plot_stacked_bar(fig, summary_data, colors, priority_counts):
 
     # Format the x-axis with better date spacing
     chart_ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-    plt.setp(chart_ax.get_xticklabels(), rotation=45, ha='right')
+    plt.setp(chart_ax.get_xticklabels(), fontsize=8, rotation=45, ha='right')
 
     # Add labels and title
     chart_ax.set_title('Threat Tippers', fontsize=14, fontweight='bold', pad=20)
@@ -137,7 +137,7 @@ def generate_threat_hunt_report(hunt_details):
     # Add the current time to the chart
     now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
     trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    plt.text(0.02, -0.1, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
+    plt.text(0.05, -0.1, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
 
     # Save with tight layout and display
     today_date = datetime.now().strftime('%m-%d-%Y')
