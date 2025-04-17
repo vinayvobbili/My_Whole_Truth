@@ -115,7 +115,7 @@ def plot_yesterday():
 
 def plot_past_60_days():
     query = f'type:{config.ticket_type_prefix}'
-    period = {"byTo": "days", "toValue": None, "byFrom": "days", "fromValue": 60}
+    period = {"byTo": "day", "toValue": None, "byFrom": "day", "fromValue": 60}
     tickets = IncidentHandler().get_tickets(query=query, period=period)
 
     if not tickets:
