@@ -74,7 +74,7 @@ def plot_stacked_bar(fig, summary_data, colors, priority_counts):
     labels = []
 
     # Plot each priority level - reversed order to match example (Low at bottom)
-    for priority in ['Low', 'Medium', 'High', 'Critical']:
+    for priority in ['Info', 'Low', 'Medium', 'High', 'Critical']:
         if priority in summary_data.columns:
             bars = chart_ax.bar(summary_data.index, summary_data[priority], bottom=bottom,
                                 label=f"{priority} ({priority_counts.get(priority, 0)})", color=colors[priority])
