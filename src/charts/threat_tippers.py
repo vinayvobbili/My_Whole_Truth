@@ -47,7 +47,7 @@ def process_tipper_data(threat_tippers):
         priority_text = next((tag for tag in priority_labels if tag in tags), 'Unknown')
 
         action_labels = ['Detection Opportunity', 'Hunt Opportunity', 'None']
-        action_text = next((tag for tag in action_labels if tag in tags), 'Unknown')
+        action_text = next((tag for tag in action_labels if tag in tags), 'None')  # Default to "None"
 
         processed_data.append({
             'Week': week,
