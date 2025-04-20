@@ -135,6 +135,7 @@ class CrowdstrikeEfficacyChart:
             total_width = df.iloc[i].sum()
             ax.text(total_width, i, f'  {int(noise)}% noise', va='center', ha='left', fontsize=10)
 
+    @staticmethod
     def _save_chart(self, fig, output_filename: str) -> None:
         """Save the chart to the output directory."""
         today_date = datetime.now().strftime(DATE_FORMAT)
