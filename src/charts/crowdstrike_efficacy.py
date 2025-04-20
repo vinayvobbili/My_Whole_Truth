@@ -57,6 +57,17 @@ def process_tickets(tickets: List[Dict[str, Any]]) -> pd.DataFrame:
     return df
 
 
+def _save_chart(fig, output_filename: str) -> None:
+    """Save the chart to the output directory."""
+    today_date = datetime.now().strftime(DATE_FORMAT)
+    output_dir = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, output_filename)
+    plt.tight_layout()
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
 class CrowdstrikeEfficacyChart:
     """Class to generate efficacy charts for different time periods."""
 
@@ -105,7 +116,7 @@ class CrowdstrikeEfficacyChart:
             plt.xlabel(f'Number of Tickets ({time_period_label})', fontsize=10, labelpad=10, fontweight='bold', loc='left')
             plt.ylabel('Detection Technique', fontweight='bold', fontsize=10)
 
-            self._save_chart(fig, output_filename)
+            _save_chart(fig, output_filename)
         except Exception as e:
             log.error(f"Error creating chart: {e}", exc_info=True)
 
@@ -134,17 +145,6 @@ class CrowdstrikeEfficacyChart:
         for i, noise in enumerate(noise_series):
             total_width = df.iloc[i].sum()
             ax.text(total_width, i, f'  {int(noise)}% noise', va='center', ha='left', fontsize=10)
-
-    @staticmethod
-    def _save_chart(self, fig, output_filename: str) -> None:
-        """Save the chart to the output directory."""
-        today_date = datetime.now().strftime(DATE_FORMAT)
-        output_dir = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, output_filename)
-        plt.tight_layout()
-        fig.savefig(output_path)
-        plt.close(fig)
 
     def generate_chart_for_period(self, period: Dict[str, Any], title: str, time_period_label: str, output_filename: str) -> None:
         """Generate a chart for the specified time period."""
