@@ -162,7 +162,7 @@ def create_graph(tickets):
 
     # Extend the x-axis
     max_x_value = max(bottom)
-    ax.set_xlim([0, max_x_value * 1.1])  # Extend 10% beyond the maximum x-value
+    ax.set_xlim((0, max_x_value * 1.1))  # Extend 10% beyond the maximum x-value
 
     # Add labels and title
     ax.set_yticks(range(len(pyramid_sources)))

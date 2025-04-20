@@ -40,14 +40,13 @@ with open(QR_RULE_NAMES_ABBREVIATION_FILE, 'r') as f:
 class QRadarEfficacyChart:
     """Class to generate QRadar rule efficacy charts for different time periods."""
 
-    def __init__(self, ticket_type_prefix: str):
+    def __init__(self):
         """Initialize with ticket type prefix."""
-        self.ticket_type_prefix = ticket_type_prefix
         self.incident_fetcher = IncidentHandler()
 
     def get_tickets(self, period: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fetch tickets for the specified period."""
-        query = f'type:"{self.ticket_type_prefix} Qradar Alert" -owner:""'
+        query = f'type:"{CONFIG.ticket_type_prefix} Qradar Alert" -owner:""'
         tickets = self.incident_fetcher.get_tickets(query=query, period=period)
 
         if not tickets:
@@ -248,7 +247,7 @@ def send_charts() -> None:
 
 def make_chart() -> None:
     """Main function to generate all charts."""
-    efficacy_chart = QRadarEfficacyChart(ticket_type_prefix=CONFIG.ticket_type_prefix)
+    efficacy_chart = QRadarEfficacyChart()
     efficacy_chart.generate_all_charts()
 
     # Optionally send chart
