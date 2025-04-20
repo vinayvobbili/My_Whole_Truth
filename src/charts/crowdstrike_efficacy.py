@@ -159,19 +159,19 @@ class CrowdstrikeEfficacyChart:
         chart_configs = [
             {
                 "period": {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 3},
-                "title": "Crowdstrike detection Efficacy (Top 20 Techniques by Alert Volume, past Quarter)",
+                "title": "Crowdstrike Detection Efficacy (Top 20 Techniques by Alert Volume, past Quarter)",
                 "time_period_label": "last 3 months",
                 "output_filename": "CS Detection Efficacy-Quarter.png"
             },
             {
                 "period": {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1},
-                "title": "Crowdstrike detection Efficacy (Top 20 Techniques by Alert Volume, past Month)",
+                "title": "Crowdstrike Detection Efficacy (Top 20 Techniques by Alert Volume, past Month)",
                 "time_period_label": "last 1 month",
                 "output_filename": "CS Detection Efficacy-Month.png"
             },
             {
                 "period": {"byTo": "days", "toValue": None, "byFrom": "days", "fromValue": 7},
-                "title": "Crowdstrike detection Efficacy (Top 20 Techniques by Alert Volume, past Week)",
+                "title": "Crowdstrike Detection Efficacy (Top 20 Techniques by Alert Volume, past Week)",
                 "time_period_label": "last 7 days",
                 "output_filename": "CS Detection Efficacy-Week.png"
             }
