@@ -41,8 +41,8 @@ def get_tickets_by_periods(tickets):
     # Process each ticket
     for ticket in tickets:
         custom_fields = ticket['CustomFields']
-        response_sla_status = custom_fields['responsesla']['slaStatus']
-        containment_sla_status = custom_fields['containmentsla']['slaStatus']
+        response_sla_status = custom_fields['timetorespond']['slaStatus']
+        containment_sla_status = custom_fields['timetocontain']['slaStatus']
 
         incident_date = datetime.strptime(
             ticket['created'],
