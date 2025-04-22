@@ -89,7 +89,7 @@ class CrowdstrikeEfficacyChart:
             noise_series = df['Noise'].head(20)
             plot_df = df.head(20).drop(columns=['Noise', 'Total'])
 
-            fig, ax = plt.subplots(figsize=(14, 8))
+            fig, ax = plt.subplots(figsize=(20, 12))
             plot_df.plot(
                 kind='barh',
                 stacked=True,

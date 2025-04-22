@@ -122,7 +122,7 @@ class QRadarEfficacyChart:
         plot_df = df.head(20).drop(columns=['Noise', 'Total'])
 
         # Create figure and axis
-        fig, ax = plt.subplots(figsize=(14, 8))
+        fig, ax = plt.subplots(figsize=(20, 12))
 
         # Plot with explicit index positions
         plot_df.plot(
