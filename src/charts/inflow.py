@@ -34,7 +34,7 @@ def create_stacked_bar_chart(df, x_label, y_label, title):
     df_pivot = df.pivot_table(index='source', columns='severity', values='count', fill_value=0)
 
     # Plot the stacked bar chart with lighter shades
-    bars = df_pivot.plot(kind='bar', stacked=True, ax=ax, color=['#6989e8', '#ffbb78', '#98df8a', '#ff9896'])
+    bars = df_pivot.plot(kind='bar', stacked=True, ax=ax, color=['#6989e8', '#ffbb78', '#98df8a', '#ff9896'], width=0.3)
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -424,7 +424,7 @@ def create_combined_chart(expected_months, month_labels, x, ticket_types, ticket
     # Add count labels
     for i in range(len(x_pos)):
         if monthly_totals[i] > 0:
-            ax.text(x_pos[i], monthly_totals[i] + 20, f'{int(monthly_totals[i])}',
+            ax.text(float(x_pos[i]), float(monthly_totals[i]) + 20, f'{int(monthly_totals[i])}',
                     ha='center', va='bottom', fontsize=12, fontweight='bold',
                     bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2), zorder=20)
 
@@ -438,8 +438,8 @@ def create_combined_chart(expected_months, month_labels, x, ticket_types, ticket
     # Titles and labels
     ax.set_xlabel("Month", fontweight='bold', fontsize=12)
     ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=12)
-    ax.set_title(f"Inflow Over the Past 12 Months\nTotal: {len(tickets)} tickets",
-                 fontweight='bold', fontsize=16)
+    fig.suptitle(f'Inflow Over the Past 12 Months', fontweight='bold', fontsize=14)
+    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12)
 
     # Create separate legends
     handles, labels = ax.get_legend_handles_labels()
@@ -487,7 +487,7 @@ def create_impact_chart(expected_months, month_labels, x, CUSTOM_IMPACT_ORDER, i
     fig, ax = plt.subplots(figsize=(20, 12))
 
     # Plot impact bars (full width)
-    bar_width = 0.7
+    bar_width = 0.4
     x_pos = np.arange(len(month_labels))
     impact_bottom = np.zeros(len(expected_months))
 
@@ -523,8 +523,8 @@ def create_impact_chart(expected_months, month_labels, x, CUSTOM_IMPACT_ORDER, i
     # Titles and labels
     ax.set_xlabel("Month", fontweight='bold', fontsize=12)
     ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=12)
-    ax.set_title(f"Impact Distribution Over the Past 12 Months\nTotal: {len(tickets)} tickets",
-                 fontweight='bold', fontsize=16)
+    fig.suptitle(f'Impact Distribution Over the Past 12 Months', fontweight='bold', fontsize=14)
+    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12)
 
     # Create legend with counts
     handles, labels = ax.get_legend_handles_labels()
@@ -595,8 +595,8 @@ def create_ticket_type_chart(expected_months, month_labels, x, ticket_types, tic
     # Titles and labels
     ax.set_xlabel("Month", fontweight='bold', fontsize=12)
     ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=12)
-    ax.set_title(f"Ticket Type Distribution Over the Past 12 Months\nTotal: {len(tickets)} tickets",
-                 fontweight='bold', fontsize=16)
+    fig.suptitle(f'Ticket Type Distribution Over the Past 12 Months', fontweight='bold', fontsize=14)
+    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12)
 
     # Create legend with counts
     ticket_type_totals = {ticket_type: values.sum() for ticket_type, values in ticket_pivot_data.items()}
@@ -651,4 +651,4 @@ def make_chart():
 
 
 if __name__ == '__main__':
-    plot_past_12_months()
+    make_chart()
