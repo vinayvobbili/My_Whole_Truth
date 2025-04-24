@@ -438,7 +438,7 @@ def plot_past_12_months():
         total = monthly_totals[i]
         if total > 0:
             # Position label above bar with background
-            ax.text(x[i], total + 5,
+            ax.text(x[i], float(total) + 5,
                     f'{int(total)}',
                     ha='center', va='bottom',
                     fontsize=10, fontweight='bold',
@@ -519,7 +519,4 @@ def make_chart():
 
 
 if __name__ == '__main__':
-    start_time = time.time()
-    plot_past_12_months()
-    execution_time = time.time() - start_time
-    print(f"Script executed in {execution_time:.2f} seconds")
+    make_chart()
