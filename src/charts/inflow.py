@@ -227,7 +227,7 @@ def plot_period(period_config, title, output_filename):
     # Add labels and title with total count subtitle
     ax.set_xlabel("Created Date", fontweight='bold', fontsize=12, labelpad=10)
     ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=10)
-    fig.suptitle(f"{title}", fontweight='bold', fontsize=14, ha='center', x=0.5)
+    fig.suptitle(f"{title}", fontweight='bold', fontsize=14, ha='center', x=0.55)
     ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12, ha='center', x=0.5)
 
     # Add legend
