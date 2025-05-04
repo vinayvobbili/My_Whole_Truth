@@ -15,6 +15,10 @@ from data.transient.data_maps import azdo_area_paths
 eastern = pytz.timezone('US/Eastern')
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 
+# Define constants for priority and action values
+PRIORITY_LEVELS = ['Critical', 'High', 'Medium', 'Low', 'Info']
+ACTION_TYPES = ['Detection Opportunity', 'Hunt Opportunity', 'None Required']
+
 # Original colors for Priority with improved contrast
 PRIORITY_COLORS = {
     'Critical': '#dc2626',  # Slightly darker red for better contrast
@@ -28,7 +32,7 @@ PRIORITY_COLORS = {
 ACTION_COLORS = {
     'Detection Opportunity': '#0284c7',  # Distinct blue shade
     'Hunt Opportunity': '#059669',  # Green that stands out from blues
-    'None': '#FFFFE0'  # Lighter cream, closer to white
+    'None Required': '#4b5563'  # Medium gray
 }
 
 
@@ -44,11 +48,8 @@ def process_tipper_data(threat_tippers):
         week = created_date.strftime('%m/%d/%y')
 
         tags = tipper.fields.get('System.Tags', '')
-        priority_labels = ['Critical', 'High', 'Medium', 'Low', 'Info']
-        priority_text = next((tag for tag in priority_labels if tag in tags), 'Unknown')
-
-        action_labels = ['Detection Opportunity', 'Hunt Opportunity', 'None']
-        action_text = next((tag for tag in action_labels if tag in tags), 'None')  # Default to "None"
+        priority_text = next((tag for tag in PRIORITY_LEVELS if tag in tags), 'Unknown')
+        action_text = next((tag for tag in ACTION_TYPES if tag in tags), 'None Required')  # Fixed: Now defaults to "None Required"
 
         processed_data.append({
             'Week': week,
@@ -73,7 +74,7 @@ def create_summary_data_by_priority(df):
     summary = summary.sort_index()
 
     # Ensure all priority columns exist
-    for priority in ['Critical', 'High', 'Medium', 'Low', 'Info']:
+    for priority in PRIORITY_LEVELS:
         if priority not in summary.columns:
             summary[priority] = 0
 
@@ -93,7 +94,7 @@ def create_summary_data_by_action(df):
     summary = summary.sort_index()
 
     # Ensure all action columns exist
-    for action in ['Detection Opportunity', 'Hunt Opportunity', 'None']:
+    for action in ACTION_TYPES:
         if action not in summary.columns:
             summary[action] = 0
 
@@ -118,6 +119,15 @@ def plot_stacked_bar_by_priority(ax, summary_data, colors, priority_counts):
             bars = ax.bar(bar_positions, summary_data[priority], width=bar_width, bottom=bottom,
                           label=f"{priority} ({priority_counts.get(priority, 0)})", color=colors[priority])
 
+            # Add count labels to each segment
+            for i, (pos, height) in enumerate(zip(bar_positions, summary_data[priority])):
+                if height > 0:  # Only add label if there's data
+                    # Position label in middle of bar segment
+                    label_y = bottom[i] + height / 2
+                    ax.text(pos, label_y, str(int(height)),
+                            ha='center', va='center',
+                            color='white', fontweight='bold', fontsize=8)
+
             handles.append(bars[0])
             labels.append(f"{priority} ({priority_counts.get(priority, 0)})")
             bottom += np.array(summary_data[priority])
@@ -139,10 +149,19 @@ def plot_stacked_bar_by_action(ax, summary_data, colors, action_counts):
     bar_positions = np.arange(len(summary_data.index)) + bar_width / 2  # Position bars on the right side
 
     # Plot each action level - from bottom to top
-    for action in ['None', 'Hunt Opportunity', 'Detection Opportunity']:
+    for action in ACTION_TYPES[::-1]:  # Reverse the list to display None Required at bottom
         if action in summary_data.columns:
             bars = ax.bar(bar_positions, summary_data[action], width=bar_width, bottom=bottom,
                           label=f"{action} ({action_counts.get(action, 0)})", color=colors[action])
+
+            # Add count labels to each segment
+            for i, (pos, height) in enumerate(zip(bar_positions, summary_data[action])):
+                if height > 0:  # Only add label if there's data
+                    # Position label in middle of bar segment
+                    label_y = bottom[i] + height / 2
+                    ax.text(pos, label_y, str(int(height)),
+                            ha='center', va='center',
+                            color='white', fontweight='bold', fontsize=8)
 
             handles.append(bars[0])
             labels.append(f"{action} ({action_counts.get(action, 0)})")
@@ -208,7 +227,8 @@ def generate_threat_tipper_chart(tippers):
     ax.grid(axis='y', linestyle='-', alpha=0.2)
 
     # Add labels and title
-    ax.set_title('Threat Tippers', fontsize=16, fontweight='bold', pad=20)
+    fig.suptitle('Threat Tippers Summary', fontsize=14, fontweight='bold')
+    ax.set_title(f'Total {len(tippers)}', fontsize=12)
     ax.set_xlabel('Last 30 days', fontsize=10, fontweight='bold', labelpad=10)
     ax.set_ylabel('Counts', fontsize=10, fontweight='bold', labelpad=10)
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
@@ -229,50 +249,20 @@ def generate_threat_tipper_chart(tippers):
     now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
     plt.figtext(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10)
 
-    # Create interactive version for web (save as HTML)
-    from matplotlib.backends.backend_svg import FigureCanvasSVG
-
-    # Generate JavaScript for tooltips (included in HTML)
-    tooltip_js = """
-    <script>
-        // Add tooltips for interactive browser display
-        document.addEventListener('DOMContentLoaded', function() {
-            const bars = document.querySelectorAll('rect');
-            bars.forEach(function(bar) {
-                bar.addEventListener('mouseover', function(e) {
-                    const tooltip = document.getElementById('tooltip');
-                    tooltip.innerHTML = this.getAttribute('data-info');
-                    tooltip.style.display = 'block';
-                    tooltip.style.left = e.pageX + 10 + 'px';
-                    tooltip.style.top = e.pageY + 10 + 'px';
-                });
-
-                bar.addEventListener('mouseout', function() {
-                    document.getElementById('tooltip').style.display = 'none';
-                });
-            });
-        });
-    </script>
-    <div id="tooltip" style="display:none; position:absolute; background:white; padding:5px; border:1px solid black;"></div>
-    """
-
-    # Save with tight layout
-    plt.tight_layout()
-
     # Save chart files
     today_date = datetime.now().strftime('%m-%d-%Y')
     OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date
     os.makedirs(OUTPUT_PATH, exist_ok=True)
 
     # Save as PNG for static display
+    plt.tight_layout()
     plt.savefig(OUTPUT_PATH / 'Threat Tippers.png', dpi=300, bbox_inches='tight')
-
-    # Save as SVG for better web display
     plt.savefig(OUTPUT_PATH / 'Threat Tippers.svg', format='svg', bbox_inches='tight')
 
-    # For interactive web version, save HTML with embedded SVG and tooltip JS
-    # Note: In a real implementation, you'd use a proper web framework or JavaScript library like D3.js
-    # This is a simplified version for demonstration
+    # Create interactive version with tooltips (code remains the same)
+    from matplotlib.backends.backend_svg import FigureCanvasSVG
+
+    # Save HTML with embedded SVG and tooltip JS
     with open(OUTPUT_PATH / 'Threat Tippers.html', 'w') as f:
         canvas = FigureCanvasSVG(fig)
         svg_data = canvas.print_svg(OUTPUT_PATH / 'temp.svg')
@@ -294,7 +284,26 @@ def generate_threat_tipper_chart(tippers):
             <div class="chart-container">
                 {svg_content}
             </div>
-            {tooltip_js}
+            <script>
+                // Add tooltips for interactive browser display
+                document.addEventListener('DOMContentLoaded', function() {{
+                    const bars = document.querySelectorAll('rect');
+                    bars.forEach(function(bar) {{
+                        bar.addEventListener('mouseover', function(e) {{
+                            const tooltip = document.getElementById('tooltip');
+                            tooltip.innerHTML = this.getAttribute('data-info');
+                            tooltip.style.display = 'block';
+                            tooltip.style.left = e.pageX + 10 + 'px';
+                            tooltip.style.top = e.pageY + 10 + 'px';
+                        }});
+
+                        bar.addEventListener('mouseout', function() {{
+                            document.getElementById('tooltip').style.display = 'none';
+                        }});
+                    }});
+                }});
+            </script>
+            <div id="tooltip" style="display:none; position:absolute; background:white; padding:5px; border:1px solid black;"></div>
         </body>
         </html>
         """
@@ -309,7 +318,14 @@ def generate_threat_tipper_chart(tippers):
 
 def make_chart():
     try:
-        threat_tippers = azdo.get_stories_from_area_path(azdo_area_paths['threat_hunting'])  # the area path is correct even though it says Threat Hunting
+        threat_tippers = azdo.get_stories_from_area_path(azdo_area_paths['threat_hunting'])
+        # print thippers that don't have one of these tags - Info, Low, Mediium, High, Critical. Set a default tag of Info
+        for tipper in threat_tippers:
+            tags = tipper.fields.get('System.Tags', '')
+            if not any(tag in tags for tag in ['Info', 'Low', 'Medium', 'High', 'Critical']):
+                print(f"Tipper {tipper.id} missing priority tag. Current tags: {tags}. Setting a default tag of Info")
+                tipper.fields['System.Tags'] = 'Info'
+
         generate_threat_tipper_chart(threat_tippers)
     except Exception as e:
         logging.error(f"An error occurred while generating the chart: {e}")
