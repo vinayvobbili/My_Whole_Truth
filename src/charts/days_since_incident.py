@@ -141,7 +141,7 @@ class CounterImageModifier:
 
 def get_last_incident_details():
     """Get the current days since the last incident"""
-    query = f'type:{config.ticket_type_prefix} impact:Confirmed'
+    query = f'type:{config.team_name} impact:Confirmed'
     period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1}
 
     ticket = IncidentHandler().get_tickets(query=query, period=period, size=1)

@@ -34,7 +34,7 @@ def get_df(tickets: List[Dict[Any, Any]]) -> pd.DataFrame:
     df = pd.DataFrame(tickets)
     df['created'] = pd.to_datetime(df['created'])
     # Clean up type names by removing repeating prefix
-    df['type'] = df['type'].str.replace(config.ticket_type_prefix, '', regex=False, case=False)
+    df['type'] = df['type'].str.replace(config.team_name, '', regex=False, case=False)
     # Set 'phase' to 'Unknown' if it's missing
     df['phase'] = df['phase'].fillna('Unknown')
     return df
@@ -118,13 +118,13 @@ def generate_plot(tickets):
 
 def make_chart():
     # METCIRT* tickets minus the Third Party are considered aging after 30 days
-    query = f'-status:closed type:{config.ticket_type_prefix} -type:"{config.ticket_type_prefix} Third Party Compromise"'
+    query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
     period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
 
     tickets = IncidentHandler().get_tickets(query=query, period=period)
 
     # Third Party Compromise tickets are considered aging after 90 days
-    query = f'-status:closed type:"{config.ticket_type_prefix} Third Party Compromise"'
+    query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
     period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
     tickets = tickets + IncidentHandler().get_tickets(query=query, period=period)
 
