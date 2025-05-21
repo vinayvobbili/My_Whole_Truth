@@ -13,7 +13,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.ticker import MaxNLocator
 
 from config import get_config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 eastern = pytz.timezone('US/Eastern')
 
@@ -199,7 +199,7 @@ def make_chart() -> None:
     yesterday_end_utc = yesterday_end.astimezone(eastern).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.team_name, start=yesterday_start_utc, end=yesterday_end_utc)
-    tickets = IncidentHandler().get_tickets(query=query)
+    tickets = TicketHandler().get_tickets(query=query)
     create_graph(tickets)
 
 

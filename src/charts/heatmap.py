@@ -12,7 +12,7 @@ from matplotlib import transforms
 from pytz import timezone
 
 from config import get_config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 config = get_config()
 
@@ -38,7 +38,7 @@ def create_choropleth_map():
         x_cartopy_country_name_mapping = json.load(f)
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.team_name)
-    tickets = IncidentHandler().get_tickets(query=query, period=PERIOD)
+    tickets = TicketHandler().get_tickets(query=query, period=PERIOD)
     ticket_counts_by_country = {}
 
     for ticket in tickets:

@@ -8,7 +8,7 @@ import pytz
 from PIL import Image, ImageDraw, ImageFont
 
 import config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 eastern = pytz.timezone('US/Eastern')
 config = config.get_config()
@@ -144,7 +144,7 @@ def get_last_incident_details():
     query = f'type:{config.team_name} impact:Confirmed'
     period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1}
 
-    ticket = IncidentHandler().get_tickets(query=query, period=period, size=1)
+    ticket = TicketHandler().get_tickets(query=query, period=period, size=1)
     if ticket:  # Check if any tickets were returned
         latest_incident_create_date_str = ticket[0].get('created')
         latest_incident_create_date = datetime.fromisoformat(latest_incident_create_date_str.replace('Z', '+00:00'))

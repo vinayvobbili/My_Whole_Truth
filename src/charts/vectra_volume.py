@@ -7,7 +7,7 @@ import pytz
 from matplotlib import transforms
 
 from config import get_config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 eastern = pytz.timezone('US/Eastern')
 
@@ -126,7 +126,7 @@ def make_chart(months_back=3):
         query = f'type:"{CONFIG.team_name} Vectra Detection" -owner:""'
         period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": months_back}
 
-        incident_fetcher = IncidentHandler()
+        incident_fetcher = TicketHandler()
         tickets = incident_fetcher.get_tickets(query, period)
 
         generate_chart(tickets)

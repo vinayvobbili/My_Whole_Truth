@@ -10,7 +10,7 @@ import pandas as pd
 import pytz
 
 from config import get_config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 eastern = pytz.timezone('US/Eastern')  # Define the Eastern time zone
 
@@ -99,7 +99,7 @@ def get_lifespan_chart(tickets):
 
 
 def make_chart():
-    incident_fetcher = IncidentHandler()
+    incident_fetcher = TicketHandler()
     tickets = incident_fetcher.get_tickets(query=QUERY, period=PERIOD)
     get_lifespan_chart(tickets)
 

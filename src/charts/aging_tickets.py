@@ -10,7 +10,7 @@ import pytz
 from webexpythonsdk import WebexAPI
 
 import config
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 config = config.get_config()
 
@@ -121,12 +121,12 @@ def make_chart():
     query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
     period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
 
-    tickets = IncidentHandler().get_tickets(query=query, period=period)
+    tickets = TicketHandler().get_tickets(query=query, period=period)
 
     # Third Party Compromise tickets are considered aging after 90 days
     query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
     period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
-    tickets = tickets + IncidentHandler().get_tickets(query=query, period=period)
+    tickets = tickets + TicketHandler().get_tickets(query=query, period=period)
 
     generate_plot(tickets)
 
@@ -157,7 +157,7 @@ def send_report(room_id):
 
         query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
         period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
-        tickets = IncidentHandler().get_tickets(query=query, period=period)
+        tickets = TicketHandler().get_tickets(query=query, period=period)
 
         webex_api.messages.create(
             roomId=room_id,
@@ -167,7 +167,7 @@ def send_report(room_id):
 
         query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
         period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
-        tickets = IncidentHandler().get_tickets(query=query, period=period)
+        tickets = TicketHandler().get_tickets(query=query, period=period)
 
         if tickets:
             webex_api.messages.create(

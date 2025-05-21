@@ -11,7 +11,7 @@ from matplotlib import transforms
 
 from config import get_config
 from data.transient.data_maps import impact_colors
-from services.xsoar import IncidentHandler
+from services.xsoar import TicketHandler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -69,7 +69,7 @@ class CrowdstrikeEfficacyChart:
     """Class to generate efficacy charts for different time periods."""
 
     def __init__(self):
-        self.incident_fetcher = IncidentHandler()
+        self.incident_fetcher = TicketHandler()
 
     def get_tickets(self, period: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fetch tickets for the specified period."""
