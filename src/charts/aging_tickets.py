@@ -32,7 +32,7 @@ def get_df(tickets: List[Dict[Any, Any]]) -> pd.DataFrame:
         return pd.DataFrame(columns=['created', 'type', 'phase'])
 
     df = pd.DataFrame(tickets)
-    df['created'] = pd.to_datetime(df['created'])
+    df['created'] = pd.to_datetime(df['created'], format='ISO8601')  # Use ISO8601 format
     # Clean up type names by removing repeating prefix
     df['type'] = df['type'].str.replace(config.team_name, '', regex=False, case=False)
     # Set 'phase' to 'Unknown' if it's missing
@@ -117,18 +117,21 @@ def generate_plot(tickets):
 
 
 def make_chart():
-    # METCIRT* tickets minus the Third Party are considered aging after 30 days
-    query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
-    period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
+    try:
+        # METCIRT* tickets minus the Third Party are considered aging after 30 days
+        query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
+        period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
 
-    tickets = TicketHandler().get_tickets(query=query, period=period)
+        tickets = TicketHandler().get_tickets(query=query, period=period)
 
-    # Third Party Compromise tickets are considered aging after 90 days
-    query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
-    period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
-    tickets = tickets + TicketHandler().get_tickets(query=query, period=period)
+        # Third Party Compromise tickets are considered aging after 90 days
+        query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
+        period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
+        tickets = tickets + TicketHandler().get_tickets(query=query, period=period)
 
-    generate_plot(tickets)
+        generate_plot(tickets)
+    except Exception as e:
+        logger.error(f"Error generating chart: {e}")
 
 
 def generate_daily_summary(tickets) -> str | None:
