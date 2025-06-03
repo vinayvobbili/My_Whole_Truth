@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
 from matplotlib import transforms
+from webexpythonsdk import WebexAPI
 
 from config import get_config
 from data.transient.data_maps import impact_colors
@@ -23,6 +24,8 @@ CONFIG = get_config()
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 DATE_FORMAT = '%m-%d-%Y'
 TIMESTAMP_FORMAT = '%m/%d/%Y %I:%M %p %Z'
+
+webex = WebexAPI(access_token=CONFIG.webex_bot_access_token_moneyball)
 
 
 def process_tickets(tickets: List[Dict[str, Any]]) -> pd.DataFrame:
@@ -177,6 +180,20 @@ class CrowdstrikeEfficacyChart:
 
         for config in chart_configs:
             self.generate_chart_for_period(**config)
+
+
+def send_charts() -> None:
+    """Send chart via Webex."""
+    recipient_email = CONFIG.efficacy_charts_receiver
+    files = ['CrowdStrike Detection Efficacy-Quarter.png', 'CrowdStrike Detection Efficacy-Month.png', 'CrowdStrike Detection Efficacy-Week.png']
+    today_date = datetime.now().strftime('%m-%d-%Y')
+    OUTPUT_DIR = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date
+    try:
+        for file in files:
+            webex.messages.create(toPersonEmail=recipient_email, files=[f'{OUTPUT_DIR / file}'])
+        log.info(f"Chart sent to {recipient_email}")
+    except Exception as e:
+        log.error(f"Error sending chart: {e}", exc_info=True)
 
 
 def make_chart() -> None:

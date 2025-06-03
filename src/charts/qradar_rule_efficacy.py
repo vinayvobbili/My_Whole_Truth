@@ -232,7 +232,7 @@ class QRadarEfficacyChart:
 
 def send_charts() -> None:
     """Send chart via Webex."""
-    recipient_email = CONFIG.qradar_efficacy_chart_receiver
+    recipient_email = CONFIG.efficacy_charts_receiver
     files = ['QR Rule Efficacy-Quarter.png', 'QR Rule Efficacy-Month.png', 'QR Rule Efficacy-Week.png']
     today_date = datetime.now().strftime('%m-%d-%Y')
     OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
@@ -250,7 +250,7 @@ def make_chart() -> None:
     efficacy_chart.generate_all_charts()
 
     # Optionally send chart
-    # send_chart(CONFIG.qradar_efficacy_chart_receiver, os.path.join(OUTPUT_DIR, 'QR Rule Efficacy-Quarter.png'))
+    # send_chart(CONFIG.efficacy_charts_receiver, os.path.join(OUTPUT_DIR, 'QR Rule Efficacy-Quarter.png'))
 
 
 if __name__ == '__main__':
