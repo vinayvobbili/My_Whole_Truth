@@ -28,7 +28,7 @@ with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
 QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" closed:>={start} closed:<{end}'
 
 # Define a custom order for the impacts
-CUSTOM_IMPACT_ORDER = ["Significant", "Confirmed", "Detected", "Prevented", "Ignore", "Testing", "False Positive"]
+CUSTOM_IMPACT_ORDER = ["Significant", "Confirmed", "Detected", "Prevented", "Ignore", "Testing", "Security Testing", "False Positive", "Benign True Positive", "Malicious True Positive"]
 
 # --- Logo Configuration ---
 LOGO_DIR = "web/static/logos"  # Directory where logos are stored
@@ -62,6 +62,8 @@ def create_graph(tickets):
 
     # Fill missing values in a source with "Unknown" at the beginning
     df['source'] = df['source'].fillna('Unknown')
+    df['impact'] = df['impact'].fillna('Unknown')
+    df['impact'] = df['impact'].replace('', 'Unknown')
 
     for pattern, replacement in detection_source_codes_by_name.items():
         df['source'] = df['source'].str.replace(pattern, replacement, regex=True, flags=re.IGNORECASE)
@@ -85,13 +87,16 @@ def create_graph(tickets):
 
     # Define Colors for impacts
     impact_colors = {
-        "Significant": "#ff0000",  # Red
+        "Malicious True Positive": "#ff0000",  # Red
         "Confirmed": "#ffa500",  # Orange
         "Detected": "#ffd700",  # Gold
-        "Prevented": "#008000",  # Green
-        "Ignore": "#808080",  # Gray
-        "Testing": "#add8e6",  # Light Blue
-        "False Positive": "#90ee90",  # Light green
+        "Prevented": "#bfa100",  # Dark Yellow
+        "Ignore": "#000000",  # Black
+        "Testing": "#90ee90",  # Light Green
+        "Security Testing": "#006400",  # Dark Green
+        "False Positive": "#d3d3d3",  # Light Gray
+        "Benign True Positive": "#808080",  # Gray
+        "Unknown": "#add8e6"  # Light Blue
     }
 
     # Create figure and axis
@@ -101,8 +106,12 @@ def create_graph(tickets):
     bottom = [0] * len(pyramid_sources)
     impacts = source_impact_counts['impact'].unique()
 
-    # Sort impacts based on the custom order
+    # Sort impacts based on the custom order, including any impacts not in the custom order
     sorted_impacts = [impact for impact in CUSTOM_IMPACT_ORDER if impact in impacts]
+    # Add any impacts that are in the data but not in the custom order
+    for impact in impacts:
+        if impact not in sorted_impacts:
+            sorted_impacts.append(impact)
 
     for impact in sorted_impacts:
         impact_data = source_impact_counts[source_impact_counts['impact'] == impact]
@@ -122,7 +131,17 @@ def create_graph(tickets):
         for i, count in enumerate(counts):
             if count > 0:
                 x_pos = bottom[i] + count / 2
-                ax.text(x_pos, i, str(count), ha='center', va='center', color='black' if impact in ("Ignore", "Testing", "False Positive") else 'white', fontsize=12, fontweight='bold')
+
+                # Get the bar color
+                bar_color = bars[i].get_facecolor()
+                # Convert RGB to grayscale to estimate brightness
+                r, g, b, _ = bar_color
+                brightness = (0.299 * r + 0.587 * g + 0.114 * b)
+
+                # Use white text for dark backgrounds, black for light backgrounds
+                text_color = 'white' if brightness < 0.5 else 'black'
+
+                ax.text(x_pos, i, str(count), ha='center', va='center', color=text_color, fontsize=12, fontweight='bold')
 
         bottom = [b + c for b, c in zip(bottom, counts)]
 
@@ -186,8 +205,8 @@ def create_graph(tickets):
     plt.tight_layout()
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
-    plt.savefig(OUTPUT_PATH)
+    output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
+    plt.savefig(output_path)
     plt.close(fig)
 
 
