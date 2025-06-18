@@ -109,5 +109,7 @@
   ".*CS Low Sev Followed by Detection in CS or Tanium.*": "CS Low Sev Followed by Detection in CS or Tanium",
   ".*Threat Tipper_ Email Detection.*": "Threat Tipper_ Email Detection",
   ".*Host Sending Emails to Multiple Other Internal Hosts.*": "Host Sending Emails to Multiple Other Internal Hosts",
-  ".*FIRM_User Access from Restricted Location.*": "FIRM_User Access from Restricted Location"
+  ".*FIRM_User Access from Restricted Location.*": "FIRM_User Access from Restricted Location",
+  ".*Azure Sentinel Database Security Alert.*": "Azure Sentinel Database Security Alert",
+  ".*Entra ID User Obtaining Temporary Access Pass.*": "Entra ID User Obtaining Temporary Access Pass"
 }
