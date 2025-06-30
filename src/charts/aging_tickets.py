@@ -136,22 +136,25 @@ def make_chart():
 
 def generate_daily_summary(tickets) -> str | None:
     try:
-        if tickets is None:
+        if not tickets:
             return pd.DataFrame(columns=['Owner', 'Count', 'Average Age (days)']).to_markdown(index=False)
         df = pd.DataFrame(tickets)
         df['owner'] = df['owner'].astype(str).str.replace('@company.com', '', regex=False)
-        now = pd.Timestamp.now(tz=eastern)
-        df['created'] = pd.to_datetime(df['created'], format='ISO8601')
+        df['created'] = pd.to_datetime(df['created'], errors='coerce')
+        # Drop rows where 'created' could not be parsed
+        df = df.dropna(subset=['created'])
+        # Make both sides timezone-naive for subtraction
+        now = pd.Timestamp.now(tz=eastern).tz_localize(None)
+        df['created'] = df['created'].dt.tz_localize(None)
         df['age'] = (now - df['created']).dt.days
-        table = df.groupby('owner').agg({'id': 'count', 'age': 'mean'})
-        table = table.reset_index()
+        table = df.groupby('owner').agg({'id': 'count', 'age': 'mean'}).reset_index()
         table = table.rename(columns={'owner': 'Owner', 'id': 'Count', 'age': 'Average Age (days)'})
         table['Average Age (days)'] = table['Average Age (days)'].round(1)
         table = table.sort_values(by='Average Age (days)', ascending=False)
         return table.to_markdown(index=False)
-    except (KeyError, TypeError, ValueError) as e:  # Catch potential data errors
-        logger.error(f"Error generating daily summary: {e}")  # Log the error
-        return "Error generating report. Please check the logs."  # Return a user-friendly message
+    except Exception as e:
+        logger.error(f"Error generating daily summary: {e}")
+        return "Error generating report. Please check the logs."
 
 
 def send_report(room_id):
