@@ -208,6 +208,7 @@ def create_graph(tickets):
 
     today_date = datetime.now().strftime('%m-%d-%Y')
     output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
+    output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     plt.savefig(output_path)
     plt.close(fig)
 

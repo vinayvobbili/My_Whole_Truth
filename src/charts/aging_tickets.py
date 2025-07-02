@@ -111,8 +111,9 @@ def generate_plot(tickets):
     plt.tight_layout()
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Aging Tickets.png"
-    plt.savefig(OUTPUT_PATH)
+    output_path = root_directory / "web" / "static" / "charts" / today_date / "Aging Tickets.png"
+    output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    plt.savefig(output_path)
     plt.close(fig)
 
 
