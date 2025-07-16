@@ -112,5 +112,7 @@
   ".*FIRM_User Access from Restricted Location.*": "FIRM_User Access from Restricted Location",
   ".*Azure Sentinel Database Security Alert.*": "Azure Sentinel Database Security Alert",
   ".*Entra ID User Obtaining Temporary Access Pass.*": "Entra ID User Obtaining Temporary Access Pass",
-  ".*Potential Cross-Tenant Exploitation.*": "Potential Cross-Tenant Exploitation"
+  ".*Potential Cross-Tenant Exploitation.*": "Potential Cross-Tenant Exploitation",
+  ".*DevTunnel_C2.*": "DevTunnel_C2",
+  ".*Data Exfiltration Attempt Detected.*": "Data Exfiltration Attempt Detected"
 }

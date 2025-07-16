@@ -296,7 +296,7 @@ def plot_past_12_months():
 
     # Deduplicate tickets
     tickets = list({t['id']: t for t in tickets}.values())
-    print(f"Total tickets retrieved: {len(tickets)}")
+    # print(f"Total tickets retrieved: {len(tickets)}")
 
     if not tickets:
         print("No tickets found for Past 12 Months.")
