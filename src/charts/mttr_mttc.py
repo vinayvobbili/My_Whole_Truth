@@ -215,7 +215,7 @@ def save_mttr_mttc_chart(ticket_slas_by_periods):
              bbox=dict(boxstyle="round,pad=0.4", facecolor='white', alpha=0.9, edgecolor='#1A237E', linewidth=1.5))
 
     # Enhanced titles and labels
-    plt.suptitle('Mean Time To',
+    plt.suptitle('Mean Time To Respond & Contain (MTTR MTTC)',
                  fontsize=20, fontweight='bold', color='#1A237E', y=0.95)
 
     # Set y-axis labels with different colors
