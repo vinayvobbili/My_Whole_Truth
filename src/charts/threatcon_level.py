@@ -11,27 +11,27 @@ from matplotlib.patches import FancyArrow
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 THREAT_CON_FILE = ROOT_DIRECTORY / "data" / "transient" / "secOps" / "threatcon.json"
 
-# Define color mappings for better maintenance
+# Original clean color mappings with darker, more professional colors
 COLORS = {
     'red': {
         'arc': '#8B0000',  # Dark red
         'font': '#8B0000',
-        'table_bg': '#FFB3B3'  # Light red
+        'table_bg': '#FFB6C1'
     },
     'orange': {
-        'arc': '#FF8C00',  # Dark orange
-        'font': '#FF8C00',
-        'table_bg': '#FFCC99'  # Light orange
+        'arc': '#FF8C00',  # Proper bright orange
+        'font': '#CC6600',  # Darker orange for text readability
+        'table_bg': '#FFE4B5'
     },
     'yellow': {
-        'arc': '#FFD700',  # Dark yellow
-        'font': '#FFD700',
-        'table_bg': '#FFFFB3'  # Light yellow
+        'arc': '#FFD700',  # Proper yellow - gold color
+        'font': '#B8860B',  # Darker yellow for text readability
+        'table_bg': '#FFFFE0'
     },
     'green': {
         'arc': '#006400',  # Dark green
         'font': '#006400',
-        'table_bg': '#B3FFB3'  # Light green
+        'table_bg': '#F0FFF0'
     }
 }
 
@@ -85,7 +85,7 @@ def load_threatcon_data(file_path):
 
 def create_gauge_arcs(ax):
     """
-    Create the colored arcs for the gauge.
+    Create clean colored arcs for the gauge - simple and professional.
 
     Args:
         ax (matplotlib.axes.Axes): The axes to draw on.
@@ -99,7 +99,7 @@ def create_gauge_arcs(ax):
     yellow_range = (angles > 90) & (angles <= 135)
     green_range = angles > 135
 
-    # Define radius and draw arcs
+    # Define radius and draw clean arcs
     radius = 1
     ax.plot(radius * np.cos(np.radians(angles[red_range])),
             radius * np.sin(np.radians(angles[red_range])),
@@ -117,7 +117,7 @@ def create_gauge_arcs(ax):
             radius * np.sin(np.radians(angles[green_range])),
             color=COLORS['green']['arc'], linewidth=20, zorder=1)
 
-    # Add gauge border
+    # Add simple gauge border
     outer_radius = 1.04
     ax.plot(outer_radius * np.cos(np.radians(angles)),
             outer_radius * np.sin(np.radians(angles)),
@@ -129,16 +129,12 @@ def create_gauge_arcs(ax):
 
 def add_gauge_needle(ax, threatcon_color):
     """
-    Add the needle to the gauge based on the threat level.
-
-    Args:
-        ax (matplotlib.axes.Axes): The axes to draw on.
-        threatcon_color (str): The color representing the threat level.
+    Add a clean needle to the gauge based on the threat level.
     """
     # Get the angle for the needle
     rad_angle = np.radians(THREAT_ANGLES[threatcon_color])
 
-    # Draw the needle (arrow)
+    # Draw the needle (arrow) - clean and simple
     arrow_length = 0.80
     arrow_width = 0.04
     arrow = FancyArrow(0, 0,
@@ -148,32 +144,29 @@ def add_gauge_needle(ax, threatcon_color):
                        color='black', zorder=3)
     ax.add_patch(arrow)
 
-    # Add center dot (pivot point)
+    # Add simple center dot (pivot point)
     ax.plot(0, 0, 'ko', markersize=20, zorder=2)
 
 
 def add_reason_text(fig, threatcon_details):
     """
     Add reason text to the figure if the threat level is not green.
-
-    Args:
-        fig (matplotlib.figure.Figure): The figure to add text to.
-        threatcon_details (dict): The threatcon details including level and reason.
     """
     threatcon_color = threatcon_details['level']
 
     if threatcon_color != 'green':
-        reason_text = f"Reason: \n{threatcon_details['reason']}"
-        font_color = COLORS[threatcon_color]['font']
+        reason_text = f"Reason:\n{threatcon_details['reason']}"
+        # Use darker color for better readability
+        font_color = '#333333'  # Dark gray for better contrast on light background
 
         fig.text(0.2, 0.4, reason_text,
                  ha='left', va='center',
                  fontsize=10,
                  color=font_color,
-                 bbox=dict(facecolor='gray',
-                           edgecolor='black',
-                           boxstyle='round,pad=0.5',
-                           linewidth=1))
+                 bbox=dict(facecolor='#F5F5F5',  # Much lighter gray background
+                          edgecolor='black',
+                          boxstyle='round,pad=0.5',
+                          linewidth=1))
 
 
 def create_definitions_table(plt):
@@ -233,27 +226,31 @@ def create_definitions_table(plt):
 
 def add_fancy_title(ax):
     """
-    Add a fancy title to the gauge chart.
+    Add an enhanced title with modern styling and GS-DnR branding.
     """
     current_date = datetime.today().strftime("%m/%d/%Y")
     title_text = f'Threatcon Level - {current_date}'
 
-    # Create a fancy title with gradient effect and shadow
-    ax.text(0, 1.2, title_text,
+    # Main title with enhanced styling
+    ax.text(0, 1.35, title_text,
             ha='center', va='center',
-            fontsize=12, fontweight='bold',
-            fontname='Arial Black',  # More impactful font
-            color='#003366',  # Navy blue for corporate feel
+            fontsize=18, fontweight='bold',
+            color='#1F2937',
             bbox=dict(
-                boxstyle="round,pad=0.3",
-                ec=(0.1, 0.1, 0.1, 0.9),  # Dark edge
-                fc=(0.9, 0.9, 0.95, 0.7),  # Light blue background with transparency
-                lw=2
+                boxstyle="round,pad=0.2",  # Reduced padding from 0.4 to 0.2
+                facecolor='white',
+                edgecolor='#1F2937',
+                linewidth=2,
+                alpha=0.95
             ),
-            path_effects=[
-                plt.matplotlib.patheffects.withStroke(linewidth=2, foreground='#8a8a8a')  # Add shadow effect
-            ]
-            )
+            zorder=10)
+
+    # Add GS-DnR watermark in top right
+    ax.text(1.1, 1.35, 'GS-DnR',
+            ha='right', va='center',
+            fontsize=10, style='italic', fontweight='bold',
+            color='#6B7280', alpha=0.8,
+            zorder=10)
 
 
 def gauge(threatcon_details):
