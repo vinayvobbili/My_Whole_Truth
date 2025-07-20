@@ -9,6 +9,7 @@ import matplotlib.transforms as transforms
 import numpy as np
 import pandas as pd
 import pytz
+from matplotlib.patches import FancyBboxPatch
 from webexpythonsdk import WebexAPI
 
 # Add the project root to Python path
@@ -134,7 +135,7 @@ def generate_plot(tickets):
 
         # Enhance the axes with better spacing
         ax.set_facecolor('#ffffff')
-        ax.grid(True, alpha=0.2, linestyle='--', linewidth=0.8)
+        ax.grid(False)  # Remove grid lines
         ax.set_axisbelow(True)
 
         # Set y-axis with better spacing
@@ -153,8 +154,29 @@ def generate_plot(tickets):
 
     # Add enhanced border with more prominent styling
     border_width = 4
-    fig.patch.set_edgecolor('#1A237E')  # Deep blue border
-    fig.patch.set_linewidth(border_width)
+
+    # Create a rounded rectangular border that extends to the very edge
+    # Remove the standard border to avoid conflicts
+    fig.patch.set_edgecolor('none')  # Remove default border
+    fig.patch.set_linewidth(0)
+
+    # Calculate the exact position to ensure the border appears correctly at the corners
+    fig_width, fig_height = fig.get_size_inches()
+    corner_radius = 15  # Adjust this value to control the roundness of corners
+
+    # Add a custom FancyBboxPatch that extends to the full figure bounds
+    fancy_box = FancyBboxPatch(
+        (0, 0),
+        width=1.0, height=1.0,  # Full figure dimensions
+        boxstyle=f"round,pad=0,rounding_size={corner_radius / max(fig_width * fig.dpi, fig_height * fig.dpi)}",
+        edgecolor='#1A237E',  # Deep blue border
+        facecolor='none',
+        linewidth=border_width,
+        transform=fig.transFigure,
+        zorder=1000,  # Ensure it's on top of other elements
+        clip_on=False  # Don't clip the border
+    )
+    fig.patches.append(fancy_box)
 
     # Enhanced timestamp with better positioning
     trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
