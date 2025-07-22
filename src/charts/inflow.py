@@ -72,7 +72,7 @@ def create_stacked_bar_chart(df, x_label, y_label, title):
     colors = [severity_colors.get(str(sev), "#6B7280") for sev in available_severities]
 
     # Plot the stacked bar chart with enhanced styling
-    bars = df_pivot.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.25,
+    bars = df_pivot.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.6,
                         edgecolor="white", linewidth=1.5, alpha=0.95)
 
     # Enhanced axes styling
