@@ -186,13 +186,12 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
     for bars in [bar1, bar2, bar3]:
         for bar in bars:
             height = bar.get_height()
-            if height > 0:
-                # Circle label in middle
-                ax.text(bar.get_x() + bar.get_width() / 2., height / 2,
-                       f'{int(height)}',
-                       ha='center', va='center',
-                       fontsize=12, color='white', fontweight='bold',
-                       bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
+            # Always show label, even if height is 0
+            ax.text(bar.get_x() + bar.get_width() / 2., height / 2 if height > 0 else 0.5,
+                   f'{int(height)}',
+                   ha='center', va='center',
+                   fontsize=12, color='white', fontweight='bold',
+                   bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
 
     # Add GS-DnR watermark
     fig.text(0.99, 0.01, 'GS-DnR',
