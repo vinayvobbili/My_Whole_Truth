@@ -118,8 +118,8 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
     # Professional color palette (matching MTTR/MTTC chart)
     colors = {
         '30days': '#4CAF50',  # Muted Green for 30 days
-        '7days': '#FF6B40',   # Orange for 7 days
-        'yesterday': '#4080FF' # Blue for yesterday
+        '7days': '#FF6B40',  # Orange for 7 days
+        'yesterday': '#4080FF'  # Blue for yesterday
     }
 
     # Create bars and store their container objects
@@ -175,8 +175,8 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
 
     # Enhanced legend - moved to upper left to avoid crowding with bars
     legend = ax.legend(title='Period (Ticket Count)', loc='upper left',
-                      frameon=True, fancybox=True, shadow=True,
-                      title_fontsize=12, fontsize=10)
+                       frameon=True, fancybox=True, shadow=True,
+                       title_fontsize=12, fontsize=10)
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(0.95)
     legend.get_frame().set_edgecolor('#1A237E')
@@ -188,10 +188,10 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
             height = bar.get_height()
             # Always show label, even if height is 0
             ax.text(bar.get_x() + bar.get_width() / 2., height / 2 if height > 0 else 0.5,
-                   f'{int(height)}',
-                   ha='center', va='center',
-                   fontsize=12, color='white', fontweight='bold',
-                   bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
+                    f'{int(height)}',
+                    ha='center', va='center',
+                    fontsize=12, color='white', fontweight='bold',
+                    bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
 
     # Add GS-DnR watermark
     fig.text(0.99, 0.01, 'GS-DnR',
@@ -208,9 +208,9 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
     plt.subplots_adjust(top=0.88, bottom=0.15, left=0.08, right=0.92)
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "SLA Breaches.png"
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(OUTPUT_PATH)
+    output_path = root_directory / "web" / "static" / "charts" / today_date / "SLA Breaches.png"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
     plt.close(fig)
 
 
