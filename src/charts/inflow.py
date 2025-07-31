@@ -123,29 +123,17 @@ def create_stacked_bar_chart(df, x_label, y_label, title):
     # Increase the space between x-ticks and the bars to avoid legend overlap
     ax.tick_params(axis='x', pad=20)  # Increase padding between x-ticks and bars
 
-    # Enhanced border
+    # Enhanced border (replace previous border with blue rounded rectangle)
     border_width = 4
-
-    # Create a rounded rectangular border that extends to the very edge
-    # Remove the standard border to avoid conflicts
-    fig.patch.set_edgecolor('none')  # Remove default border
-    fig.patch.set_linewidth(0)
-
-    # Calculate the exact position to ensure the border appears correctly at the corners
-    fig_width, fig_height = fig.get_size_inches()
     corner_radius = 15  # Adjust this value to control the roundness of corners
-
-    # Add a custom FancyBboxPatch that extends to the full figure bounds
+    # Remove previous FancyBboxPatch if present
+    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
+    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
     fancy_box = FancyBboxPatch(
-        (0, 0),  # Start at figure bounds
-        width=1.0, height=1.0,  # Full figure dimensions
-        boxstyle=f"round,pad=0,rounding_size={corner_radius / max(fig_width * fig.dpi, fig_height * fig.dpi)}",
-        edgecolor='#1A237E',  # Deep blue border
-        facecolor='none',
-        linewidth=border_width,
-        transform=fig.transFigure,
-        zorder=1000,  # Ensure it's on top of other elements
-        clip_on=False  # Don't clip the border
+        (0, 0), 1, 1,
+        boxstyle=f"round,pad=0.02,rounding_size={corner_radius}",
+        edgecolor='#1A237E', facecolor='none', linewidth=3,
+        transform=fig.transFigure, zorder=1000, clip_on=False
     )
     fig.patches.append(fancy_box)
 
@@ -395,6 +383,19 @@ def plot_period(period_config, title, output_filename):
     now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
     trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
     plt.text(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
+
+    # Add blue rounded rectangle border to match SLA Breaches
+    from matplotlib.patches import FancyBboxPatch
+    # Remove previous FancyBboxPatch if present
+    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
+    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
+    fancy_box = FancyBboxPatch(
+        (0, 0), 1, 1,
+        boxstyle="round,pad=0.02,rounding_size=20",
+        edgecolor='#1A237E', facecolor='none', linewidth=4,
+        transform=fig.transFigure, zorder=1000, clip_on=False
+    )
+    fig.patches.append(fancy_box)
 
     # Save the chart
     today_date = datetime.now().strftime('%m-%d-%Y')
@@ -654,6 +655,19 @@ def create_combined_chart(expected_months, month_labels, ticket_pivot_data,
     trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
     plt.text(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
 
+    # Add blue rounded rectangle border to match SLA Breaches
+    from matplotlib.patches import FancyBboxPatch
+    # Remove previous FancyBboxPatch if present
+    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
+    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
+    fancy_box = FancyBboxPatch(
+        (0, 0), 1, 1,
+        boxstyle="round,pad=0.02,rounding_size=20",
+        edgecolor='#1A237E', facecolor='none', linewidth=4,
+        transform=fig.transFigure, zorder=1000, clip_on=False
+    )
+    fig.patches.append(fancy_box)
+
     # Save the figure
     output_path = output_dir / "Inflow Past 12 Months.png"
     plt.tight_layout()
@@ -713,12 +727,12 @@ def create_impact_chart(expected_months, month_labels, custom_impact_order, impa
     # --- Apply SLA Breaches style ---
     # Blue border with rounded edges
     fig.patch.set_edgecolor('#1A237E')  # Deep blue
-    fig.patch.set_linewidth(3)
+    fig.patch.set_linewidth(0)  # Hide default border
     fig.patch.set_facecolor('#F7F8FA')  # Very light gray
-    # Add rounded rectangle border using FancyBboxPatch
-    from matplotlib.patches import FancyBboxPatch
-    fig_width, fig_height = fig.get_size_inches()
-    corner_radius = 30  # More pronounced rounding
+    # Remove previous FancyBboxPatch if present
+    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
+    # Add rounded rectangle border using FancyBboxPatch (full figure)
+    corner_radius = 40  # More pronounced rounding for corners
     fancy_box = FancyBboxPatch(
         (0, 0), 1, 1,
         boxstyle=f"round,pad=0.02,rounding_size={corner_radius}",
