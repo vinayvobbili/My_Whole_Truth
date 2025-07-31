@@ -4,13 +4,14 @@ import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict, List, Tuple, Any
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytz
 from matplotlib import transforms
-from matplotlib.patches import FancyBboxPatch
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -19,868 +20,527 @@ sys.path.insert(0, str(project_root))
 from config import get_config
 from services.xsoar import TicketHandler
 
-eastern = pytz.timezone('US/Eastern')
 
-config = get_config()
+@dataclass
+class ChartConfig:
+    """Configuration for chart styling and behavior."""
+    figure_size: Tuple[int, int] = (14, 10)
+    font_family: List[str] = None
+    background_color: str = '#f8f9fa'
+    border_color: str = '#1A237E'
+    border_width: int = 6
 
-QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" created:>={start} created:<{end}'
-
-root_directory = Path(__file__).parent.parent.parent
-DETECTION_SOURCE_NAMES_ABBREVIATION_FILE = root_directory / 'data' / 'metrics' / 'detection_source_name_abbreviations.json'
-
-with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
-    detection_source_codes_by_name = json.load(f)
+    def __post_init__(self):
+        if self.font_family is None:
+            self.font_family = ['DejaVu Sans', 'Arial Unicode MS', 'Arial']
 
 
-def create_stacked_bar_chart(df, x_label, y_label, title):
-    """Creates a stacked bar chart from a pandas DataFrame."""
-    # Set up enhanced plot style without grids
-    plt.style.use('default')
+@dataclass
+class ColorSchemes:
+    """Color schemes for different chart categories."""
 
-    # Configure matplotlib fonts
-    import matplotlib
-    matplotlib.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS', 'Arial']
-
-    # Enhanced figure with better proportions and styling
-    fig, ax = plt.subplots(figsize=(14, 10), facecolor='#f8f9fa')
-    fig.patch.set_facecolor('#f8f9fa')
-
-    # Pivot the DataFrame to get the counts of each severity per source
-    df_pivot = df.pivot_table(index='source', columns='severity', values='count', fill_value=0)
-
-    # Enhanced color palette for severity levels (updated to handle all common severity values)
-    severity_colors = {
-        "Critical": "#DC2626",  # Modern red
-        "High": "#EA580C",  # Modern orange
-        "Medium": "#CA8A04",  # Modern amber
-        "Low": "#16A34A",  # Modern green
-        "Informational": "#3B82F6",  # Modern blue
-        "Info": "#3B82F6",  # Modern blue (alternative name)
-        "Unknown": "#6B7280",  # Medium gray
-        # Handle numeric severity levels
-        "4": "#DC2626",  # Critical - red
-        "3": "#EA580C",  # High - orange
-        "2": "#CA8A04",  # Medium - amber
-        "1": "#16A34A",  # Low - green
-        "0": "#3B82F6",  # Informational - blue
-        # Handle any other values
-        "": "#6B7280"  # Empty/null - gray
+    SEVERITY_COLORS = {
+        "Critical": "#DC2626", "High": "#EA580C", "Medium": "#CA8A04",
+        "Low": "#16A34A", "Informational": "#3B82F6", "Info": "#3B82F6",
+        "Unknown": "#6B7280", "4": "#DC2626", "3": "#EA580C",
+        "2": "#CA8A04", "1": "#16A34A", "0": "#3B82F6", "": "#6B7280"
     }
 
-    # Get available severities and assign colors
-    available_severities = df_pivot.columns.tolist()
-    colors = [severity_colors.get(str(sev), "#6B7280") for sev in available_severities]
+    IMPACT_COLORS = {
+        "Significant": "#ff0000", "Confirmed": "#ffa500",
+        "Malicious True Positive": "#b71c1c", "Detected": "#ffd700",
+        "Prevented": "#008000", "Ignore": "#808080",
+        "Benign True Positive": "#388e3c", "Testing": "#add8e6",
+        "Security Testing": "#1976d2", "False Positive": "#90ee90",
+        "Unknown": "#d3d3d3"
+    }
 
-    # Plot the stacked bar chart with enhanced styling
-    bars = df_pivot.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.6,
-                         edgecolor="white", linewidth=1.5, alpha=0.95)
+    IMPACT_ORDER = [
+        "Significant", "Malicious True Positive", "Confirmed", "Detected",
+        "Prevented", "Benign True Positive", "False Positive", "Ignore",
+        "Testing", "Security Testing", "Unknown"
+    ]
 
-    # Enhanced axes styling
-    ax.set_facecolor('#ffffff')
-    ax.grid(False)  # Explicitly disable grid
-    ax.set_axisbelow(True)
 
-    # Style the spines
-    for spine in ax.spines.values():
-        spine.set_color('#CCCCCC')
-        spine.set_linewidth(1.5)
+class ChartStyler:
+    """Handles chart styling and visual elements."""
 
-    # Enhanced labels and title
-    ax.set_xlabel(x_label, fontweight='bold', fontsize=12, color='#1A237E', labelpad=10)
-    ax.set_ylabel(y_label, fontweight='bold', fontsize=12, color='#1A237E')
-    ax.set_title(title, fontweight='bold', fontsize=20, color='#1A237E', pad=20)
+    def __init__(self, config: ChartConfig):
+        self.config = config
+        self._setup_matplotlib()
 
-    # Increase the y-axis limit a few units over the max value
-    max_value = df_pivot.sum(axis=1).max()
-    ax.set_ylim(0, max_value + 3)
+    def _setup_matplotlib(self):
+        """Configure matplotlib settings."""
+        plt.style.use('default')
+        import matplotlib
+        matplotlib.rcParams['font.family'] = self.config.font_family
 
-    # Ensure y-ticks are integers
-    ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+    def apply_base_styling(self, fig, ax):
+        """Apply base styling to figure and axes."""
+        fig.patch.set_facecolor(self.config.background_color)
+        ax.set_facecolor('#ffffff')
+        ax.grid(False)
 
-    # Enhanced value labels with black circles (matching outflow style)
-    for container in bars.containers:
-        for bar in container:
-            height = bar.get_height()
-            if height > 0:
-                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_y() + height / 2,
-                        f'{int(height)}', ha='center', va='center',
-                        color='white', fontsize=14, fontweight='bold',
+        for spine in ax.spines.values():
+            spine.set_color('#CCCCCC')
+            spine.set_linewidth(1.5)
+
+    def add_border(self, fig):
+        """Add blue rounded border to figure."""
+        from matplotlib.patches import FancyBboxPatch
+
+        # Set figure background
+        fig.patch.set_facecolor(self.config.background_color)
+
+        # Remove any existing FancyBboxPatch borders
+        fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
+
+        # Add rounded rectangle border
+        fancy_box = FancyBboxPatch(
+            (0.005, 0.005), 0.99, 0.99,  # Position and size with small margin
+            boxstyle="round,pad=0.01,rounding_size=0.02",  # Rounded corners
+            edgecolor=self.config.border_color,
+            facecolor='none',
+            linewidth=self.config.border_width,
+            transform=fig.transFigure,
+            zorder=1000,
+            clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
+    def add_timestamp(self, fig):
+        """Add timestamp to bottom left of figure."""
+        eastern = pytz.timezone('US/Eastern')
+        timestamp = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
+        trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
+
+        plt.text(0.01, 0.02, f"Generated@ {timestamp}",
+                 transform=trans, ha='left', va='bottom',
+                 fontsize=10, color=self.config.border_color, fontweight='bold',
+                 bbox=dict(boxstyle="round,pad=0.4", facecolor='white', alpha=0.9,
+                           edgecolor=self.config.border_color, linewidth=1.5))
+
+    def add_watermark(self, fig):
+        """Add GS-DnR watermark to bottom right."""
+        fig.text(0.99, 0.01, 'GS-DnR', ha='right', va='bottom',
+                 fontsize=10, alpha=0.7, color='#3F51B5',
+                 style='italic', fontweight='bold')
+
+
+class DataProcessor:
+    """Handles data processing and transformation."""
+
+    @staticmethod
+    def load_source_abbreviations() -> Dict[str, str]:
+        """Load detection source name abbreviations."""
+        root_dir = Path(__file__).parent.parent.parent
+        file_path = root_dir / 'data' / 'metrics' / 'detection_source_name_abbreviations.json'
+
+        with open(file_path, 'r') as f:
+            return json.load(f)
+
+    @staticmethod
+    def process_tickets_for_inflow(tickets: List[Dict]) -> pd.DataFrame:
+        """Process tickets for inflow analysis."""
+        df = pd.DataFrame(tickets)
+        df['source'] = df['CustomFields'].apply(lambda x: x.get('detectionsource', 'Unknown'))
+        df['severity'] = df['severity'].fillna('Unknown')
+
+        source_abbrev = DataProcessor.load_source_abbreviations()
+        for pattern, replacement in source_abbrev.items():
+            df['source'] = df['source'].str.replace(pattern, replacement, regex=True, flags=re.IGNORECASE)
+
+        df['source'] = df['source'].replace('', 'Unknown')
+        return df.groupby(['source', 'severity']).size().reset_index(name='count')
+
+    @staticmethod
+    def process_tickets_for_period(tickets: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, List[Any]]:
+        """Process tickets for period analysis."""
+        df = pd.DataFrame(tickets)
+        df['created_date'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.date
+        df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
+        df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
+
+        # Ensure impacts follow predefined order
+        df['impact'] = df['impact'].apply(
+            lambda x: x if x in ColorSchemes.IMPACT_ORDER else 'Unknown'
+        )
+
+        unique_dates = sorted(df['created_date'].unique())
+        date_impact_counts = df.groupby(['created_date', 'impact']).size().reset_index(name='count')
+
+        return date_impact_counts, unique_dates
+
+
+class StackedBarChart:
+    """Creates stacked bar charts."""
+
+    def __init__(self, styler: ChartStyler):
+        self.styler = styler
+
+    def create_inflow_chart(self, df: pd.DataFrame, title: str) -> plt.Figure:
+        """Create inflow stacked bar chart."""
+        fig, ax = plt.subplots(figsize=self.styler.config.figure_size)
+        self.styler.apply_base_styling(fig, ax)
+
+        df_pivot = df.pivot_table(index='source', columns='severity', values='count', fill_value=0)
+        colors = [ColorSchemes.SEVERITY_COLORS.get(str(sev), "#6B7280")
+                  for sev in df_pivot.columns]
+
+        df_pivot.plot(kind='bar', stacked=True, ax=ax, color=colors,
+                      width=0.6, edgecolor="white", linewidth=1.5, alpha=0.95)
+
+        self._add_value_labels(ax)
+        self._configure_axes(ax, "Detection Source", "Number of Alerts", title)
+        self._add_legend(ax, 'Severity')
+
+        max_value = df_pivot.sum(axis=1).max()
+        ax.set_ylim(0, max_value + 3)
+        ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
+        return fig
+
+    def _add_value_labels(self, ax) -> None:
+        """Add value labels to bars."""
+        for container in ax.containers:
+            for bar in container:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width() / 2,
+                            bar.get_y() + height / 2,
+                            f'{int(height)}', ha='center', va='center',
+                            color='white', fontsize=14, fontweight='bold',
+                            bbox=dict(boxstyle="circle,pad=0.2", facecolor='black',
+                                      alpha=0.8, edgecolor='white', linewidth=1))
+
+    def _configure_axes(self, ax, xlabel: str, ylabel: str, title: str) -> None:
+        """Configure axes labels and title."""
+        ax.set_xlabel(xlabel, fontweight='bold', fontsize=12,
+                      color=self.styler.config.border_color, labelpad=10)
+        ax.set_ylabel(ylabel, fontweight='bold', fontsize=12,
+                      color=self.styler.config.border_color)
+        ax.set_title(title, fontweight='bold', fontsize=20,
+                     color=self.styler.config.border_color, pad=20)
+
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right',
+                           fontsize=10, color=self.styler.config.border_color)
+        ax.tick_params(axis='y', labelsize=10, colors=self.styler.config.border_color)
+        ax.tick_params(axis='x', pad=20)
+
+    def _add_legend(self, ax, title: str) -> None:
+        """Add styled legend."""
+        legend = ax.legend(title=title, loc='upper right', frameon=True,
+                           fancybox=True, shadow=True, title_fontsize=12, fontsize=10)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.95)
+        legend.get_frame().set_edgecolor(self.styler.config.border_color)
+        legend.get_frame().set_linewidth(2)
+
+
+class PeriodChart:
+    """Creates period-based charts."""
+
+    def __init__(self, styler: ChartStyler):
+        self.styler = styler
+
+    def create_period_chart(self, date_impact_counts: pd.DataFrame,
+                            unique_dates: List[Any], tickets: List[Dict[str, Any]], title: str) -> plt.Figure:
+        """Create period chart with impact analysis."""
+        fig, ax = plt.subplots(figsize=(20, 12))
+        self.styler.apply_base_styling(fig, ax)
+
+        dates = [date.strftime('%m/%d') for date in unique_dates]
+        pivot_data = self._create_pivot_data(date_impact_counts, unique_dates)
+        daily_totals = self._calculate_daily_totals(pivot_data)
+
+        self._plot_stacked_bars(ax, dates, pivot_data, daily_totals)
+        self._add_average_line(ax, daily_totals)
+        self._configure_period_axes(ax, dates, daily_totals, title, len(tickets))
+
+        return fig
+
+    def _create_pivot_data(self, date_impact_counts: pd.DataFrame, unique_dates: List[Any]) -> Dict[str, np.ndarray]:
+        """Create pivot data structure for plotting."""
+        pivot_data = {impact: np.zeros(len(unique_dates)) for impact in ColorSchemes.IMPACT_ORDER}
+
+        for _, row in date_impact_counts.iterrows():
+            if row['created_date'] in unique_dates:
+                date_idx = unique_dates.index(row['created_date'])
+                pivot_data[row['impact']][date_idx] += row['count']
+
+        return pivot_data
+
+    def _calculate_daily_totals(self, pivot_data: Dict[str, np.ndarray]) -> np.ndarray:
+        """Calculate daily totals from pivot data."""
+        return sum(pivot_data.values())
+
+    def _plot_stacked_bars(self, ax, dates: List[str], pivot_data: Dict[str, np.ndarray], daily_totals: np.ndarray) -> None:
+        """Plot stacked bars for each impact category."""
+        x = np.arange(len(dates))
+        bottom = np.zeros(len(dates))
+
+        for impact in ColorSchemes.IMPACT_ORDER:
+            values = pivot_data[impact]
+            ax.bar(x, values, bottom=bottom, label=impact,
+                   color=ColorSchemes.IMPACT_COLORS.get(impact, '#000000'))
+            bottom += values
+
+        # Add total labels
+        for i, total in enumerate(daily_totals):
+            if total > 0:
+                ax.text(x[i], total + 2, f'{int(total)}', ha='center', va='center',
+                        fontsize=10, fontweight='bold',
                         bbox=dict(boxstyle="circle,pad=0.2", facecolor='black',
                                   alpha=0.8, edgecolor='white', linewidth=1))
 
-    # Enhanced legend
-    legend = ax.legend(title='Severity', loc='upper right', frameon=True, fancybox=True, shadow=True,
-                       title_fontsize=12, fontsize=10)
-    legend.get_frame().set_facecolor('white')
-    legend.get_frame().set_alpha(0.95)
-    legend.get_frame().set_edgecolor('#1A237E')
-    legend.get_frame().set_linewidth(2)
+    def _add_average_line(self, ax, daily_totals: np.ndarray) -> None:
+        """Add daily average line."""
+        daily_average = daily_totals.mean()
+        ax.axhline(daily_average, color='blue', linestyle='--', linewidth=1.5,
+                   label=f'Daily Average ({int(daily_average)})')
 
-    # Enhanced x-axis labels
-    ax.set_xticklabels(df_pivot.index, rotation=45, ha='right', fontsize=10, color='#1A237E')
-    ax.tick_params(axis='y', labelsize=10, colors='#1A237E')
+    def _configure_period_axes(self, ax, dates: List[str], daily_totals: np.ndarray,
+                               title: str, ticket_count: int) -> None:
+        """Configure axes for period chart."""
+        x = np.arange(len(dates))
+        ax.set_xticks(x)
+        ax.set_ylim(0, daily_totals.max() * 1.1)
 
-    # Increase the space between x-ticks and the bars to avoid legend overlap
-    ax.tick_params(axis='x', pad=20)  # Increase padding between x-ticks and bars
+        # Show every 5th label to prevent crowding
+        date_labels = [dates[i] if i % 5 == 0 else "" for i in range(len(dates))]
+        ax.set_xticklabels(date_labels, rotation=45, ha='right', fontsize=8)
 
-    # Enhanced border (replace previous border with blue rounded rectangle)
-    border_width = 4
-    corner_radius = 15  # Adjust this value to control the roundness of corners
-    # Remove previous FancyBboxPatch if present
-    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
-    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
-    fancy_box = FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle=f"round,pad=0.02,rounding_size={corner_radius}",
-        edgecolor='#1A237E', facecolor='none', linewidth=3,
-        transform=fig.transFigure, zorder=1000, clip_on=False
-    )
-    fig.patches.append(fancy_box)
+        ax.set_xlabel("Created Date", fontweight='bold', fontsize=12, labelpad=10)
+        ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=10)
+        ax.set_title(f"{title}\nTotal: {ticket_count} tickets", fontsize=12, ha='center')
 
-    plt.tight_layout()
-    return fig
+        ax.legend(title='Impact', title_fontproperties={'weight': 'bold'})
 
 
-def plot_yesterday():
-    """Plots the ticket inflow by source."""
-    start_time = time.time()
+class TicketChartGenerator:
+    """Main class for generating ticket charts."""
 
-    # Calculate fresh values EACH TIME the command is run
-    et = pytz.timezone("US/Eastern")
-    yesterday_start = datetime.now(et).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
-    yesterday_end = yesterday_start + timedelta(days=1)
-    yesterday_start_utc = yesterday_start.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    yesterday_end_utc = yesterday_end.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    def __init__(self):
+        self.config = get_config()
+        self.chart_config = ChartConfig()
+        self.styler = ChartStyler(self.chart_config)
+        self.stacked_chart = StackedBarChart(self.styler)
+        self.period_chart = PeriodChart(self.styler)
+        self.ticket_handler = TicketHandler()
+        self.eastern = pytz.timezone('US/Eastern')
 
-    query = QUERY_TEMPLATE.format(ticket_type_prefix=config.team_name, start=yesterday_start_utc, end=yesterday_end_utc)
-    tickets = TicketHandler().get_tickets(query=query)
+        # Setup output directory
+        self.root_directory = Path(__file__).parent.parent.parent
+        today_date = datetime.now().strftime('%m-%d-%Y')
+        self.output_dir = self.root_directory / "web" / "static" / "charts" / today_date
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create a DataFrame from the tickets
-    if not tickets:
-        print('No tickets found matching the current query')
-        execution_time = time.time() - start_time
-        return execution_time
+    def generate_yesterday_chart(self) -> float:
+        """Generate yesterday's inflow chart."""
+        start_time = time.time()
 
-    df = pd.DataFrame(tickets)
+        yesterday_start, yesterday_end = self._get_yesterday_range()
+        query = f'type:{self.config.team_name} -owner:"" created:>={yesterday_start} created:<{yesterday_end}'
+        tickets = self.ticket_handler.get_tickets(query=query)
 
-    # Extract the 'detectionsource' from the 'CustomFields' dictionary and 'severity' directly from the ticket
-    df['source'] = df['CustomFields'].apply(lambda x: x.get('detectionsource'))
-    df['severity'] = df['severity']
+        if not tickets:
+            print('No tickets found for yesterday')
+            return time.time() - start_time
 
-    # Handle missing values:
-    df['source'] = df['source'].fillna('Unknown')
-    df['severity'] = df['severity'].fillna('Unknown')
+        processed_data = DataProcessor.process_tickets_for_inflow(tickets)
+        fig = self.stacked_chart.create_inflow_chart(
+            processed_data, f"Inflow Yesterday ({len(tickets)})"
+        )
 
-    for pattern, replacement in detection_source_codes_by_name.items():
-        df['source'] = df['source'].str.replace(pattern, replacement, regex=True, flags=re.IGNORECASE)
-
-    # Normalize empty strings to "Unknown"
-    df['source'] = df['source'].replace('', 'Unknown')
-
-    # Count the occurrences of each source and severity
-    source_severity_counts = df.groupby(['source', 'severity']).size().reset_index(name='count')
-
-    # Create the stacked bar chart with enhanced styling
-    fig = create_stacked_bar_chart(source_severity_counts, "Detection Source", "Number of Alerts", f"Inflow Yesterday ({len(tickets)})")
-
-    # Enhanced timestamp with modern styling - moved to left end (matching outflow style)
-    trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-
-    plt.text(0.01, 0.02, f"Generated@ {now_eastern}",
-             transform=trans, ha='left', va='bottom',
-             fontsize=10, color='#1A237E', fontweight='bold',
-             bbox=dict(boxstyle="round,pad=0.4", facecolor='white', alpha=0.9,
-                       edgecolor='#1A237E', linewidth=1.5))
-
-    # Add GS-DnR watermark (matching outflow style)
-    fig.text(0.99, 0.01, 'GS-DnR',
-             ha='right', va='bottom', fontsize=10,
-             alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
-
-    # Adjust layout
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.88, bottom=0.15, left=0.08, right=0.92)
-
-    today_date = datetime.now().strftime('%m-%d-%Y')
-    output_path = root_directory / "web" / "static" / "charts" / today_date / "Inflow Yesterday.png"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, format='png', bbox_inches=None, pad_inches=0, dpi=300)
-    plt.close(fig)
-
-    execution_time = time.time() - start_time
-    return execution_time
-
-
-def plot_period(period_config, title, output_filename):
-    """
-    Creates a chart for ticket inflow over a specified period.
-
-    Args:
-        period_config: Dictionary containing period configuration
-        title: Chart title
-        output_filename: Output file name
-    """
-    start_time = time.time()
-
-    query = f'type:{config.team_name} -owner:""'
-    tickets = TicketHandler().get_tickets(query=query, period=period_config)
-
-    if not tickets:
-        print(f"No tickets found for {title}.")
-        execution_time = time.time() - start_time
-        return execution_time
-
-    df = pd.DataFrame(tickets)
-
-    # Extract 'created_date' and 'impact' fields
-    df['created_date'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.date
-    df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
-
-    # Set missing or empty impact values to 'Unknown'
-    df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
-
-    # Define custom order and colors - add 'Unknown' category
-    custom_impact_order = ["Significant", "Confirmed", "Detected", "Prevented", "Ignore", "Testing", "False Positive", "Unknown"]
-    impact_colors = {
-        "Significant": "#ff0000",  # Red
-        "Confirmed": "#ffa500",  # Orange
-        "Detected": "#ffd700",  # Gold
-        "Prevented": "#008000",  # Green
-        "Ignore": "#808080",  # Gray
-        "Testing": "#add8e6",  # Light Blue
-        "False Positive": "#90ee90",  # Light green
-        "Unknown": "#d3d3d3",  # Light gray
-    }
-
-    # Ensure all impacts are in our predefined list
-    df['impact'] = df['impact'].apply(lambda x: x if x in custom_impact_order else 'Unknown')
-
-    # Group by 'created_date' and 'impact', then count occurrences
-    date_impact_counts = df.groupby(['created_date', 'impact'], observed=True).size().reset_index(name='count')
-
-    # Ensure impacts follow the custom order
-    date_impact_counts['impact'] = pd.Categorical(date_impact_counts['impact'], categories=custom_impact_order, ordered=True)
-
-    # Create pivot data structure
-    unique_dates = sorted(df['created_date'].unique())
-    pivot_data = {impact: np.zeros(len(unique_dates)) for impact in custom_impact_order}
-    daily_totals = np.zeros(len(unique_dates))
-
-    # Fill in the values
-    for _, row in date_impact_counts.iterrows():
-        # Ensure native types for indexing
-        created_date = row['created_date']
-        if hasattr(created_date, 'item'):
-            created_date = created_date.item()
-        impact = row['impact']
-        if hasattr(impact, 'item'):
-            impact = impact.item()
-        count = row['count']
-        if hasattr(count, 'item'):
-            count = count.item()
-        date_idx = list(unique_dates).index(created_date)
-        pivot_data[impact][date_idx] += count
-        daily_totals[date_idx] += count
-
-    # Verify all tickets are accounted for
-    total_in_chart = sum(daily_totals)
-    if total_in_chart != len(tickets):
-        print(f"Warning: Chart shows {total_in_chart} tickets but dataset has {len(tickets)} tickets")
-
-    # Create a figure with proper size
-    fig, ax = plt.subplots(figsize=(20, 12))
-
-    # Format dates for display
-    dates = [date.strftime('%m/%d') for date in unique_dates]
-    x = np.arange(len(dates))
-
-    # Plot each impact category as a separate bar component
-    bottom = np.zeros(len(dates))
-    for impact in custom_impact_order:
-        impact_key = impact.item() if hasattr(impact, 'item') else impact
-        values = pivot_data[impact_key]
-        # Ensure values is a numpy array of floats
-        if hasattr(values, 'astype'):
-            values = values.astype(float)
-        ax.bar(x, values, bottom=bottom, label=impact_key, color=impact_colors.get(impact_key, '#000000'))
-        bottom = bottom + values
-
-    # Show daily totals at the top of each bar
-    for i, total in enumerate(daily_totals):
-        # Fix: handle tuple case for total
-        if isinstance(total, tuple):
-            # Fix: handle tuple case for total
-            if len(total) > 0 and isinstance(total[0], (int, float)):
-                total_val = float(total[0])
-            else:
-                total_val = 0.0
-        elif hasattr(total, 'item'):
-            total_val = total.item()
-        elif isinstance(total, np.ndarray):
-            # Fix: flatten and convert ndarray to float
-            flat = total.flatten()
-            if flat.size > 0:
-                total_val = float(flat[0])
-            else:
-                total_val = 0.0
-        else:
-            try:
-                if isinstance(total, tuple):
-                    total_val = float(total[0]) if len(total) > 0 else 0.0
-                else:
-                    total_val = float(total)
-            except Exception:
-                total_val = 0.0
-        # Fix: handle tuple case for x[i]
-        if isinstance(x[i], tuple):
-            x_val = float(x[i][0])
-        elif hasattr(x[i], 'item'):
-            x_val = x[i].item()
-        elif isinstance(x[i], np.ndarray):
-            x_val = float(x[i].flatten()[0])
-        else:
-            x_val = float(x[i])
-        if total_val > 0:
-            ax.text(x_val, total_val + 2, f'{int(total_val)}', ha='center', va='center', fontsize=10, fontweight='bold',
-                    bbox=dict(boxstyle="circle,pad=0.2", facecolor='black',
-                              alpha=0.8, edgecolor='white', linewidth=1))
-
-    # Plot a horizontal line for the daily average
-    daily_average = date_impact_counts.groupby('created_date')['count'].sum().mean()
-    ax.axhline(daily_average, color='blue', linestyle='--', linewidth=1.5, label=f'Daily Average ({int(daily_average)})')
-
-    # Set x-ticks at the correct positions
-    ax.set_xticks(x)
-    ax.set_ylim(0, bottom.max() * 1.1)  # Add 10% extra space above the tallest bar
-
-    plot_yesterday()
-    ax.tick_params(axis='x', pad=20)  # Increase padding between x-ticks and bars
-
-    # Show only every nth label to prevent crowding
-    n = 5  # Show every 5th label
-    date_labels = dates.copy()
-    for i in range(len(dates)):
-        if i % n != 0:
-            date_labels[i] = ""
-
-    ax.set_xticklabels(date_labels, rotation=45, ha='right', fontsize=8)
-
-    # Add labels and title with total count subtitle
-    ax.set_xlabel("Created Date", fontweight='bold', fontsize=12, labelpad=10)
-    ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=10)
-    fig.suptitle(f"{title}", fontweight='bold', fontsize=14, ha='center', x=0.55)
-    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12, ha='center', x=0.5)
-
-    # Add legend
-    ax.legend(title='Impact', title_fontproperties={'weight': 'bold'})
-
-    # Add a thin black border around the figure
-    fig.patch.set_edgecolor('black')
-    fig.patch.set_linewidth(5)
-
-    # Add the current time to the chart
-    now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-    trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    plt.text(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
-
-    # Add blue rounded rectangle border to match SLA Breaches
-    from matplotlib.patches import FancyBboxPatch
-    # Remove previous FancyBboxPatch if present
-    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
-    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
-    fancy_box = FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02,rounding_size=20",
-        edgecolor='#1A237E', facecolor='none', linewidth=4,
-        transform=fig.transFigure, zorder=1000, clip_on=False
-    )
-    fig.patches.append(fancy_box)
-
-    # Save the chart
-    today_date = datetime.now().strftime('%m-%d-%Y')
-    output_path = root_directory / "web" / "static" / "charts" / today_date / output_filename
-
-    # Ensure directory exists
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    plt.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
-
-    execution_time = time.time() - start_time
-    return execution_time
-
-
-def plot_past_60_days():
-    start_time = time.time()
-    period = {
-        "by": "day",
-        "fromValue": 60
-    }
-    exec_time = plot_period(
-        period_config=period,
-        title="Inflow Over the Past 60 Days",
-        output_filename="Inflow Past 60 Days.png"
-    )
-
-    # If plot_period returned a time, use it; otherwise calculate from our start time
-    if exec_time is not None:
-        return exec_time
-    else:
+        self._finalize_and_save_chart(fig, "Inflow Yesterday.png")
         return time.time() - start_time
 
+    def generate_60_day_chart(self) -> float:
+        """Generate past 60 days chart."""
+        period = {"by": "day", "fromValue": 60}
+        return self._generate_period_chart(
+            period, "Inflow Over the Past 60 Days", "Inflow Past 60 Days.png"
+        )
 
-def plot_past_12_months():
-    """Creates charts for ticket inflow over the past 12 months, grouped by month."""
-    start_time = time.time()
+    def generate_12_month_chart(self) -> float:
+        """Generate past 12 months impact chart."""
+        start_time = time.time()
 
-    query = f'type:{config.team_name} -owner:""'
-    tickets = []
+        query = f'type:{self.config.team_name} -owner:""'
+        tickets = self._fetch_12_month_tickets(query)
 
-    # Fetch data in chunks to handle potential volume
-    for i in range(0, 13, 3):
-        period = {
-            "byFrom": "months",
-            "fromValue": 12 - i,
-            "byTo": "months",
-            "toValue": max(0, 9 - i)
-        }
-        quarter_tickets = TicketHandler().get_tickets(query=query, period=period, size=10000)
-        tickets.extend(quarter_tickets)
+        if not tickets:
+            print("No tickets found for Past 12 Months.")
+            return time.time() - start_time
 
-    # Deduplicate tickets
-    tickets = list({t['id']: t for t in tickets}.values())
-    # print(f"Total tickets retrieved: {len(tickets)}")
+        df = pd.DataFrame(tickets)
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')
+        df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')
+        df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
+        df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
+        df['impact'] = df['impact'].apply(
+            lambda x: x if x in ColorSchemes.IMPACT_ORDER else 'Unknown'
+        )
 
-    if not tickets:
-        print("No tickets found for Past 12 Months.")
+        expected_months = self._get_expected_months()
+        month_labels = [month.strftime('%b %Y') for month in expected_months]
+        month_impact_counts = df.groupby(['created_month', 'impact']).size().reset_index(name='count')
+
+        fig = self._create_monthly_impact_chart(
+            expected_months, month_labels, month_impact_counts, tickets
+        )
+
+        self._finalize_and_save_chart(fig, "Inflow Past 12 Months - Impact Only.png")
         return time.time() - start_time
 
-    df = pd.DataFrame(tickets)
+    def _get_yesterday_range(self) -> Tuple[str, str]:
+        """Get yesterday's date range in UTC."""
+        yesterday_start = (datetime.now(self.eastern)
+                           .replace(hour=0, minute=0, second=0, microsecond=0)
+                           - timedelta(days=1))
+        yesterday_end = yesterday_start + timedelta(days=1)
 
-    # Extract created_month
-    df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')
-    df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')
+        return (yesterday_start.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                yesterday_end.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
 
-    # Generate expected months (past 12 months)
-    current_month = pd.Period(datetime.now(), freq='M')
-    expected_months = [current_month - i for i in range(11, -1, -1)]
-    month_labels = [month.strftime('%b %Y') for month in expected_months]
-    np.arange(len(month_labels)) * 1.0
+    def _generate_period_chart(self, period_config: Dict[str, Any], title: str, filename: str) -> float:
+        """Generate a period-based chart."""
+        start_time = time.time()
 
-    # Process ticket type data
-    df['ticket_type'] = df['type'].fillna('Unknown').replace('', 'Unknown')
-    df['ticket_type'] = df['ticket_type'].str.replace(config.team_name, '').str.strip()
-    ticket_types = sorted(df['ticket_type'].unique())
+        query = f'type:{self.config.team_name} -owner:""'
+        tickets = self.ticket_handler.get_tickets(query=query, period=period_config)
 
-    # Ensure ticket_types are strings
-    ticket_types = [str(t.item()) if hasattr(t, 'item') else str(t) for t in ticket_types]
-    # Ensure expected_months are Periods
-    expected_months = [m.item() if hasattr(m, 'item') else m for m in expected_months]
-    month_ticket_counts = df.groupby(['created_month', 'ticket_type'], observed=True).size().reset_index(name='count')
+        if not tickets:
+            print(f"No tickets found for {title}.")
+            return time.time() - start_time
 
-    # Create ticket type data structure
-    ticket_pivot_data = {ticket_type: np.zeros(len(expected_months)) for ticket_type in ticket_types}
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
-              '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78', '#98df8a', '#ff9896']
-    ticket_type_color_map = {ticket_type: colors[i % len(colors)] for i, ticket_type in enumerate(ticket_types)}
+        date_impact_counts, unique_dates = DataProcessor.process_tickets_for_period(tickets)
+        fig = self.period_chart.create_period_chart(date_impact_counts, unique_dates, tickets, title)
 
-    # Fill ticket type values
-    for _, row in month_ticket_counts.iterrows():
-        if row['created_month'] in expected_months:
-            month_idx = expected_months.index(row['created_month'])
-            ticket_type = row['ticket_type']
-            count = row['count']
-            ticket_pivot_data[ticket_type][month_idx] += count
+        self._finalize_and_save_chart(fig, filename)
+        return time.time() - start_time
 
-    # Process impact data
-    df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
-    df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
-    custom_impact_order = ["Significant", "Malicious True Positive", "Confirmed", "Detected", "Prevented", "Benign True Positive", "False Positive", "Ignore", "Testing", "Security Testing", "Unknown"]
-    impact_colors = {
-        "Significant": "#ff0000",  # Red
-        "Confirmed": "#ffa500",  # Orange
-        "Malicious True Positive": "#b71c1c",  # Dark Red
-        "Detected": "#ffd700",  # Gold
-        "Prevented": "#008000",  # Green
-        "Ignore": "#808080",  # Gray
-        "Benign True Positive": "#388e3c",  # Dark Green
-        "Testing": "#add8e6",  # Light Blue
-        "Security Testing": "#1976d2",  # Blue
-        "False Positive": "#90ee90",  # Light green
-        "Unknown": "#d3d3d3",  # Light gray
-    }
+    def _fetch_12_month_tickets(self, query: str) -> List[Dict[str, Any]]:
+        """Fetch tickets for the past 12 months in chunks."""
+        tickets = []
 
-    # Ensure impacts follow predefined list
-    df['impact'] = df['impact'].apply(lambda x: x if x in custom_impact_order else 'Unknown')
-    month_impact_counts = df.groupby(['created_month', 'impact'], observed=True).size().reset_index(name='count')
+        for i in range(0, 13, 3):
+            period = {
+                "byFrom": "months", "fromValue": 12 - i,
+                "byTo": "months", "toValue": max(0, 9 - i)
+            }
+            quarter_tickets = self.ticket_handler.get_tickets(query=query, period=period, size=10000)
+            tickets.extend(quarter_tickets)
 
-    # Create impact data structure
-    impact_pivot_data = {impact: np.zeros(len(expected_months)) for impact in custom_impact_order}
-    monthly_totals = np.zeros(len(expected_months))
+        # Deduplicate
+        return list({t['id']: t for t in tickets}.values())
 
-    # Fill impact values
-    for _, row in month_impact_counts.iterrows():
-        if row['created_month'] in expected_months:
-            month_idx = expected_months.index(row['created_month'])
-            impact = row['impact']
-            count = row['count']
-            impact_pivot_data[impact][month_idx] += count
-            monthly_totals[month_idx] += count
+    def _get_expected_months(self) -> List[Any]:
+        """Get list of expected months for the past 12 months."""
+        current_month = pd.Period(datetime.now(), freq='M')
+        return [current_month - i for i in range(11, -1, -1)]
 
-    monthly_average = monthly_totals.mean()
-    today_date = datetime.now().strftime('%m-%d-%Y')
-    output_dir = root_directory / "web" / "static" / "charts" / today_date
-    output_dir.mkdir(parents=True, exist_ok=True)
+    def _create_monthly_impact_chart(self, expected_months: List[Any], month_labels: List[str],
+                                     month_impact_counts: pd.DataFrame, tickets: List[Dict[str, Any]]) -> plt.Figure:
+        """Create monthly impact distribution chart."""
+        fig, ax = plt.subplots(figsize=(20, 12))
+        self.styler.apply_base_styling(fig, ax)
 
-    # 1. Create combined chart (original)
-    create_combined_chart(expected_months, month_labels, ticket_pivot_data,
-                          ticket_type_color_map, custom_impact_order, impact_pivot_data, impact_colors,
-                          monthly_totals, monthly_average, tickets, output_dir)
+        # Create pivot data
+        impact_pivot_data = {impact: np.zeros(len(expected_months)) for impact in ColorSchemes.IMPACT_ORDER}
+        monthly_totals = np.zeros(len(expected_months))
 
-    # 2. Create impact-only chart
-    create_impact_chart(expected_months, month_labels, custom_impact_order, impact_pivot_data,
-                        impact_colors, monthly_totals, monthly_average, tickets, output_dir)
+        for _, row in month_impact_counts.iterrows():
+            if row['created_month'] in expected_months:
+                month_idx = expected_months.index(row['created_month'])
+                impact_pivot_data[row['impact']][month_idx] += row['count']
+                monthly_totals[month_idx] += row['count']
 
-    # 3. Create ticket type-only chart
-    create_ticket_type_chart(expected_months, month_labels, ticket_types, ticket_pivot_data,
-                             ticket_type_color_map, monthly_totals, monthly_average, tickets, output_dir)
+        # Plot bars
+        x_pos = np.arange(len(month_labels))
+        impact_bottom = np.zeros(len(expected_months))
 
-    return time.time() - start_time
+        for impact in ColorSchemes.IMPACT_ORDER:
+            values = impact_pivot_data[impact]
+            if values.sum() > 0:
+                ax.bar(x_pos, values, bottom=impact_bottom, width=0.4,
+                       label=impact, color=ColorSchemes.IMPACT_COLORS[impact])
+                impact_bottom += values
 
+        # Add average line and trend
+        monthly_average = monthly_totals.mean()
+        ax.axhline(monthly_average, color='blue', linestyle='--', linewidth=2,
+                   label=f'Monthly Average ({int(monthly_average)})')
+        ax.plot(x_pos, monthly_totals, color='red', marker='o', markersize=8,
+                linewidth=2.5, label='Monthly Volume', zorder=10)
 
-def create_combined_chart(expected_months, month_labels, ticket_pivot_data,
-                          ticket_type_color_map, custom_impact_order, impact_pivot_data, impact_colors,
-                          monthly_totals, monthly_average, tickets, output_dir):
-    """Creates the original combined chart with both ticket types and impacts."""
-    fig, ax = plt.subplots(figsize=(22, 14))
+        # Add count labels
+        for i, total in enumerate(monthly_totals):
+            if total > 0:
+                ax.text(x_pos[i], total + 20, f'{int(total)}',
+                        ha='center', va='bottom', fontsize=12, fontweight='bold',
+                        bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2))
 
-    # Setup positions
-    group_width = 0.6
-    bar_width = group_width / 2
-    spacing = 0.4
-    x_pos = np.arange(len(month_labels)) * (group_width + spacing)
-    type_x = x_pos - bar_width / 2
-    impact_x = x_pos + bar_width / 2
+        # Configure axes
+        ax.set_xticks(x_pos)
+        ax.set_ylim(0, impact_bottom.max() * 1.15)
+        ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12)
+        ax.tick_params(axis='y', colors=self.chart_config.border_color, labelsize=12)
+        ax.tick_params(axis='x', colors=self.chart_config.border_color, labelsize=12)
 
-    # Plot ticket type bars (left)
-    type_bottom = np.zeros(len(expected_months))
-    for ticket_type, values in ticket_pivot_data.items():
-        if values.sum() > 0:
-            ax.bar(type_x, values, bottom=type_bottom, width=bar_width,
-                   label=f"{ticket_type}", color=ticket_type_color_map[ticket_type],
-                   edgecolor='black', linewidth=0.5)
-            type_bottom += values
+        # Titles and legend
+        fig.suptitle('Impact Distribution Over the Past 12 Months',
+                     fontweight='bold', fontsize=22, color=self.chart_config.border_color)
+        ax.set_title(f"Total: {len(tickets)} tickets", fontsize=14,
+                     color=self.chart_config.border_color)
+        ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=14,
+                      color=self.chart_config.border_color)
 
-    # Plot impact bars (right)
-    impact_bottom = np.zeros(len(expected_months))
-    for impact in custom_impact_order:
-        values = impact_pivot_data[impact]
-        if values.sum() > 0:
-            ax.bar(impact_x, values, bottom=impact_bottom, width=bar_width,
-                   label=f"{impact}", color=impact_colors[impact])
-            impact_bottom += values
-
-    # Monthly average line
-    ax.axhline(monthly_average, color='blue', linestyle='--', linewidth=2,
-               label=f'Monthly Average ({int(monthly_average)})')
-
-    # Trend line
-    ax.plot(x_pos.astype(float), monthly_totals.astype(float), color='red', marker='o', markersize=8,
-            linewidth=2.5, label='Monthly Volume', zorder=10)
-
-    # Add count labels
-    for i in range(len(x_pos)):
-        total = monthly_totals[i]
-        if total > 0:
-            # Ensure total is a native Python type
-            if isinstance(total, tuple):
-                total_val = float(total[0])
-            elif hasattr(total, 'item'):
-                total_val = total.item()
-            elif isinstance(total, np.ndarray):
-                total_val = float(total.flatten()[0])
+        # Add legend with counts
+        handles, labels = ax.get_legend_handles_labels()
+        impact_totals = {impact: impact_pivot_data[impact].sum() for impact in ColorSchemes.IMPACT_ORDER}
+        custom_labels = []
+        for label in labels:
+            if label in ColorSchemes.IMPACT_ORDER:
+                custom_labels.append(f"{label} ({int(impact_totals[label])})")
             else:
-                total_val = float(total)
-            ax.text(float(x_pos[i]), total_val + 20, f'{int(total_val)}',
-                    ha='center', va='bottom', fontsize=12, fontweight='bold',
-                    bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2), zorder=20)
+                custom_labels.append(label)
 
-    # Formatting
-    ax.set_xticks(x_pos)
-    y_max = max(max(type_bottom), max(impact_bottom), 100) * 1.15
-    ax.set_ylim(0, y_max)
-    ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12)
-    ax.tick_params(axis='y', labelsize=12)
+        legend = ax.legend(handles, custom_labels, title="Impact",
+                           title_fontproperties={'weight': 'bold', 'size': 14},
+                           loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=12)
+        legend.get_frame().set_edgecolor(self.chart_config.border_color)
+        legend.get_frame().set_linewidth(2)
 
-    # Titles and labels
-    ax.set_xlabel("Month", fontweight='bold', fontsize=12)
-    ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=12)
-    fig.suptitle(f'Inflow Over the Past 12 Months', fontweight='bold', fontsize=14, x=0.5)
-    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12, x=0.5)
+        return fig
 
-    # Create separate legends
-    handles, labels = ax.get_legend_handles_labels()
+    def _finalize_and_save_chart(self, fig: plt.Figure, filename: str) -> None:
+        """Apply final styling and save chart."""
+        self.styler.add_border(fig)
+        self.styler.add_timestamp(fig)
+        self.styler.add_watermark(fig)
 
-    # Add counts to labels
-    ticket_type_totals = {ticket_type: values.sum() for ticket_type, values in ticket_pivot_data.items()}
-    impact_totals = {impact: impact_pivot_data[impact].sum() for impact in custom_impact_order}
+        plt.tight_layout()
+        output_path = self.output_dir / filename
+        plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+        plt.close(fig)
 
-    type_handles = [h for h, l in zip(handles, labels) if "Monthly" not in l and l not in custom_impact_order]
-    type_labels = [l for l in labels if "Monthly" not in l and l not in custom_impact_order]
-    impact_handles = [h for h, l in zip(handles, labels) if "Monthly" in l or l in custom_impact_order]
-    impact_labels = [l for l in labels if "Monthly" in l or l in custom_impact_order]
-
-    type_labels_with_counts = [f"{l} ({int(ticket_type_totals[l])})" for l in type_labels]
-    impact_labels_with_counts = []
-    for l in impact_labels:
-        if l in custom_impact_order:
-            impact_labels_with_counts.append(f"{l} ({int(impact_totals[l])})")
-        else:
-            impact_labels_with_counts.append(l)
-
-    type_legend = ax.legend(type_handles, type_labels_with_counts,
-                            title="Ticket Types", title_fontproperties={'weight': 'bold', 'size': 12},
-                            loc='upper left', fontsize=10)
-    ax.add_artist(type_legend)
-    ax.legend(impact_handles, impact_labels_with_counts,
-              title="Impact", title_fontproperties={'weight': 'bold', 'size': 12},
-              loc='upper right', fontsize=10)
-
-    # Add border and timestamp
-    fig.patch.set_edgecolor('black')
-    fig.patch.set_linewidth(5)
-    now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-    trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    plt.text(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
-
-    # Add blue rounded rectangle border to match SLA Breaches
-    from matplotlib.patches import FancyBboxPatch
-    # Remove previous FancyBboxPatch if present
-    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
-    # Add blue rounded rectangle border using FancyBboxPatch (full figure)
-    fancy_box = FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02,rounding_size=20",
-        edgecolor='#1A237E', facecolor='none', linewidth=4,
-        transform=fig.transFigure, zorder=1000, clip_on=False
-    )
-    fig.patches.append(fancy_box)
-
-    # Save the figure
-    output_path = output_dir / "Inflow Past 12 Months.png"
-    plt.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
+    def generate_all_charts(self) -> None:
+        """Generate all charts."""
+        try:
+            self.generate_yesterday_chart()
+            self.generate_60_day_chart()
+            self.generate_12_month_chart()
+            print("All charts generated successfully")
+        except Exception as e:
+            print(f"Error generating charts: {e}")
 
 
-def create_impact_chart(expected_months, month_labels, custom_impact_order, impact_pivot_data,
-                        impact_colors, monthly_totals, monthly_average, tickets, output_dir):
-    """Creates a chart showing only impact data."""
-    fig, ax = plt.subplots(figsize=(20, 12))
-
-    # Plot impact bars (full width)
-    bar_width = 0.4
-    x_pos = np.arange(len(month_labels))
-    impact_bottom = np.zeros(len(expected_months))
-
-    for impact in custom_impact_order:
-        values = impact_pivot_data[impact]
-        if values.sum() > 0:
-            ax.bar(x_pos, values, bottom=impact_bottom, width=bar_width,
-                   label=f"{impact}", color=impact_colors[impact])
-            impact_bottom += values
-
-    # Monthly average line
-    ax.axhline(monthly_average, color='blue', linestyle='--', linewidth=2,
-               label=f'Monthly Average ({int(monthly_average)})')
-
-    # Trend line
-    ax.plot(x_pos.astype(float), monthly_totals.astype(float), color='red', marker='o', markersize=8,
-            linewidth=2.5, label='Monthly Volume', zorder=10)
-
-    # Add count labels
-    for i in range(len(x_pos)):
-        total = monthly_totals[i]
-        if total > 0:
-            # Ensure total is a native Python type
-            if isinstance(total, tuple):
-                total_val = float(total[0])
-            elif hasattr(total, 'item'):
-                total_val = total.item()
-            elif isinstance(total, np.ndarray):
-                total_val = float(total.flatten()[0])
-            else:
-                total_val = float(total)
-            ax.text(x_pos[i], total_val + 20, f'{int(total_val)}',
-                    ha='center', va='bottom', fontsize=12, fontweight='bold',
-                    bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2), zorder=20)
-
-    # Formatting
-    ax.set_xticks(x_pos)
-    y_max = max(impact_bottom.max(), 100) * 1.15
-    ax.set_ylim(0, y_max)
-    ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12)
-    ax.tick_params(axis='y', labelsize=12)
-
-    # --- Apply SLA Breaches style ---
-    # Blue border with rounded edges
-    fig.patch.set_edgecolor('#1A237E')  # Deep blue
-    fig.patch.set_linewidth(0)  # Hide default border
-    fig.patch.set_facecolor('#F7F8FA')  # Very light gray
-    # Remove previous FancyBboxPatch if present
-    fig.patches = [p for p in fig.patches if not isinstance(p, FancyBboxPatch)]
-    # Add rounded rectangle border using FancyBboxPatch (full figure)
-    corner_radius = 40  # More pronounced rounding for corners
-    fancy_box = FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle=f"round,pad=0.02,rounding_size={corner_radius}",
-        edgecolor='#1A237E', facecolor='none', linewidth=3,
-        transform=fig.transFigure, zorder=1000, clip_on=False
-    )
-    fig.patches.append(fancy_box)
-
-    # Blue title
-    fig.suptitle('Impact Distribution Over the Past 12 Months', fontweight='bold', fontsize=22, color='#1A237E', x=0.5)
-    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=14, color='#1A237E', x=0.5)
-
-    # Blue axis labels
-    ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=14, color='#1A237E')
-    ax.set_xlabel(ax.get_xlabel(), fontweight='bold', fontsize=14, color='#1A237E')
-
-    # Blue tick labels
-    ax.tick_params(axis='x', colors='#1A237E', labelsize=12)
-    ax.tick_params(axis='y', colors='#1A237E', labelsize=12)
-
-    # Legend styling (border, font, position)
-    handles, labels = ax.get_legend_handles_labels()
-    impact_totals = {impact: impact_pivot_data[impact].sum() for impact in custom_impact_order}
-    custom_labels = []
-    for l in labels:
-        if l in custom_impact_order:
-            custom_labels.append(f"{l} ({int(impact_totals[l])})")
-        else:
-            custom_labels.append(l)
-    legend = ax.legend(handles, custom_labels, title="Impact",
-                       title_fontproperties={'weight': 'bold', 'size': 14},
-                       loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=12, borderaxespad=0)
-    legend.get_frame().set_edgecolor('#1A237E')
-    legend.get_frame().set_linewidth(2)
-    legend.get_frame().set_boxstyle('round,pad=0.4')
-
-    # Timestamp box (bottom left, blue border)
-    now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-    trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    plt.text(0.01, 0.01, f"Generated@ {now_eastern}", ha='left', va='bottom', fontsize=12, color='#1A237E',
-             bbox=dict(facecolor='#F7F8FA', edgecolor='#1A237E', boxstyle='round,pad=0.4', linewidth=2),
-             transform=trans)
-
-    # Add GS-DnR watermark (matching SLA Breaches style)
-    fig.text(0.99, 0.01, 'GS-DnR',
-             ha='right', va='bottom', fontsize=10,
-             alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
-
-    # Save the figure
-    output_path = output_dir / "Inflow Past 12 Months - Impact Only.png"
-    plt.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
-
-
-def create_ticket_type_chart(expected_months, month_labels, ticket_types, ticket_pivot_data,
-                             ticket_type_color_map, monthly_totals, monthly_average, tickets, output_dir):
-    """Creates a chart showing only ticket type data."""
-    fig, ax = plt.subplots(figsize=(20, 12))
-
-    # Plot ticket type bars (full width)
-    bar_width = 0.7
-    x_pos = np.arange(len(month_labels))
-    type_bottom = np.zeros(len(expected_months))
-
-    for ticket_type, values in ticket_pivot_data.items():
-        if values.sum() > 0:
-            ax.bar(x_pos, values, bottom=type_bottom, width=bar_width,
-                   label=f"{ticket_type}", color=ticket_type_color_map[ticket_type],
-                   edgecolor='black', linewidth=0.5)
-            type_bottom += values
-
-    # Monthly average line
-    ax.axhline(monthly_average, color='blue', linestyle='--', linewidth=2,
-               label=f'Monthly Average ({int(monthly_average)})')
-
-    # Trend line
-    ax.plot(x_pos.astype(float), monthly_totals.astype(float), color='red', marker='o', markersize=8,
-            linewidth=2.5, label='Monthly Volume', zorder=10)
-
-    # Add count labels
-    for i in range(len(x_pos)):
-        total = monthly_totals[i]
-        if total > 0:
-            # Ensure total is a native Python type
-            if isinstance(total, tuple):
-                total_val = float(total[0])
-            elif hasattr(total, 'item'):
-                total_val = total.item()
-            elif isinstance(total, np.ndarray):
-                total_val = float(total.flatten()[0])
-            else:
-                total_val = float(total)
-            ax.text(x_pos[i], total_val + 20, f'{int(total_val)}',
-                    ha='center', va='bottom', fontsize=12, fontweight='bold',
-                    bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2), zorder=20)
-
-    # Formatting
-    ax.set_xticks(x_pos)
-    y_max = max(type_bottom.max(), 100) * 1.15
-    ax.set_ylim(0, y_max)
-    ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12)
-    ax.tick_params(axis='y', labelsize=12)
-
-    # Titles and labels
-    ax.set_xlabel("Month", fontweight='bold', fontsize=12)
-    ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=12)
-    fig.suptitle(f'Ticket Type Distribution Over the Past 12 Months', fontweight='bold', fontsize=14, x=0.5)
-    ax.set_title(f"Total: {len(tickets)} tickets", fontsize=12, x=0.5)
-
-    # Create legend with counts
-    ticket_type_totals = {ticket_type: values.sum() for ticket_type, values in ticket_pivot_data.items()}
-    handles, labels = ax.get_legend_handles_labels()
-
-    custom_labels = []
-    for l in labels:
-        if l in ticket_types:
-            custom_labels.append(f"{l} ({int(ticket_type_totals[l])})")
-        else:
-            custom_labels.append(l)
-
-    ax.legend(handles, custom_labels, title="Ticket Types",
-              title_fontproperties={'weight': 'bold', 'size': 12},
-              loc='upper left', fontsize=10)
-
-    # Add border and timestamp
-    fig.patch.set_edgecolor('black')
-    fig.patch.set_linewidth(5)
-    now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-    trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-    plt.text(0.05, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
-
-    # Save the figure
-    output_path = output_dir / "Inflow Past 12 Months - Ticket Type Only.png"
-    plt.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
-
-
-def make_chart():
-    try:
-        plot_yesterday()
-        plot_past_60_days()
-        plot_past_12_months()
-
-    except Exception as e:
-        print(f"An error occurred while generating charts: {e}")
+def make_chart() -> None:
+    """Main entry point for chart generation."""
+    generator = TicketChartGenerator()
+    generator.generate_all_charts()
 
 
 if __name__ == '__main__':
-    plot_past_12_months()
+    make_chart()
