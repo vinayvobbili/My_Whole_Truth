@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
 
-from config import get_config
+from my_config import get_config
 from services.xsoar import TicketHandler
 
 eastern = pytz.timezone('US/Eastern')  # Define the Eastern time zone

@@ -17,7 +17,7 @@ from matplotlib import transforms
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from config import get_config
+from my_config import get_config
 from services.xsoar import TicketHandler
 
 

@@ -8,7 +8,7 @@ import pytz
 import requests
 from matplotlib import transforms
 
-from config import get_config
+from my_config import get_config
 
 config = get_config()
 eastern = pytz.timezone('US/Eastern')

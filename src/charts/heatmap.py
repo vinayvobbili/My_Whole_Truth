@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib import transforms
 from pytz import timezone
 
-from config import get_config
+from my_config import get_config
 from services.xsoar import TicketHandler
 import ssl
 import urllib.request

@@ -10,7 +10,7 @@ import pytz
 from matplotlib import transforms
 from webexpythonsdk import WebexAPI
 
-from config import get_config
+from my_config import get_config
 from data.data_maps import impact_colors
 from services.xsoar import TicketHandler
 
