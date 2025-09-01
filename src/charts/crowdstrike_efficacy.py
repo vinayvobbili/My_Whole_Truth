@@ -40,7 +40,7 @@ def process_tickets(tickets: List[Dict[str, Any]]) -> pd.DataFrame:
     for ticket in tickets:
         technique = ticket['CustomFields'].get('technique')[0]
         impact = ticket['CustomFields'].get('impact', 'Unknown')
-        
+
         # Replace blank/empty impact with "Unknown" for clarity
         if not impact or impact.strip() == '':
             impact = 'Unknown'
@@ -183,7 +183,7 @@ class CrowdstrikeEfficacyChart:
             legend.get_frame().set_linewidth(2)
             legend.get_title().set_fontweight('bold')
             legend.get_title().set_color('#1A237E')
-            
+
             # Keep legend text normal weight to avoid clutter
             for text in legend.get_texts():
                 text.set_fontweight('normal')
@@ -217,10 +217,10 @@ class CrowdstrikeEfficacyChart:
             if "(" in title:
                 subtitle_part = title.split("(", 1)[1].rstrip(")")  # Remove trailing parenthesis
                 plt.title(f'{subtitle_part} (Total: {total_all_techniques})',
-                         fontsize=16, fontweight='bold', color='#3F51B5', pad=30)
+                          fontsize=16, fontweight='bold', color='#3F51B5', pad=30)
             else:
                 plt.title(f'(Total: {total_all_techniques})',
-                         fontsize=16, fontweight='bold', color='#3F51B5', pad=30)
+                          fontsize=16, fontweight='bold', color='#3F51B5', pad=30)
             plt.xlabel(f'Number of Tickets ({time_period_label})',
                        fontsize=14, labelpad=15, fontweight='bold', color='#1A237E')
             plt.ylabel('Detection Technique', fontweight='bold',
@@ -245,7 +245,7 @@ class CrowdstrikeEfficacyChart:
         now_eastern = datetime.now(EASTERN_TZ).strftime(TIMESTAMP_FORMAT)
         trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
         fig.text(0.02, 0.01, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
-        fig.text(0.68, 0.01, 'Noise = (Total - Confirmed - Testing - Prevented) / Total * 100%',
+        fig.text(0.68, 0.01, 'Noise = (Total - MTP - Testing) / Total * 100%',
                  ha='left', va='bottom', fontsize=10, transform=trans)
 
     @staticmethod

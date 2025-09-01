@@ -112,5 +112,11 @@
   ".*Entra ID User Obtaining Temporary Access Pass.*": "Entra ID User Obtaining Temporary Access Pass",
   ".*Potential Cross-Tenant Exploitation.*": "Potential Cross-Tenant Exploitation",
   ".*DevTunnel_C2.*": "DevTunnel_C2",
-  ".*Data Exfiltration Attempt Detected.*": "Data Exfiltration Attempt Detected"
+  ".*Data Exfiltration Attempt Detected.*": "Data Exfiltration Attempt Detected",
+  ".*_AE_TaniumDeletingShadowVolumeCopies.*": "Tanium Deleting Shadow Volume Copies",
+  ".*_AE_Teams Non-Expiring Account Unexpected Login Activity.*": "Teams Non-Expiring Account Unexpected Login Activity",
+  ".*_AE_Suspicious Connection to Apache Guacamole.*": "Suspicious Connection to Apache Guacamole",
+  ".*_AE_Expedited CrowdStrike Monitoring for Erlang hosts CVE-2025-32433.*": "Expedited CrowdStrike Monitoring for Erlang hosts CVE-2025-32433",
+  ".*_AE_T02\\.U006\\.R193\\.Email Security Alert Followed by EDR Detection\\.TA0001\\.T1566\\.001.*": "Email Security Alert Followed by EDR Detection",
+  ".*_AE_ToolShellCVE-2025-53770 Exploit Attempt Detected.*": "ToolShell CVE-2025-53770 Exploit Attempt Detected"
 }
