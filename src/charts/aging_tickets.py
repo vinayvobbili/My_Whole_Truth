@@ -123,18 +123,36 @@ def generate_plot(tickets):
             '8. Closure': 'Closure Phase'
         }
         grouped_data = grouped_data.rename(columns=column_mapping)
+        
+        # 4. Sort phases in logical IR workflow order
+        phase_order = [
+            '1. Investigation', '2. Containment', '3. Investigation', 
+            '4. Eradication', '5. Eradication', '6. Recovery', 
+            '7. Lessons Learned', '8. Closure', 'Closure Phase',
+            'Investigation', 'Containment', 'Eradication', 'Recovery', 
+            'Lessons Learned', 'Closure', 'New', 'In Progress', 'Pending', 
+            'Resolved', 'Unknown', 'Unassigned', 'Undefined Phase'
+        ]
+        # Reorder columns based on phase order (keep only existing phases)
+        existing_phases = grouped_data.columns.tolist()
+        ordered_phases = [phase for phase in phase_order if phase in existing_phases]
+        # Add any remaining phases not in our order
+        remaining_phases = [phase for phase in existing_phases if phase not in ordered_phases]
+        final_order = ordered_phases + remaining_phases
+        grouped_data = grouped_data[final_order]
 
         # Create figure with even better proportions to completely fix title overlap
         fig, ax = plt.subplots(figsize=(16, 12), facecolor='#f8f9fa')
         fig.patch.set_facecolor('#f8f9fa')
 
-        # Get distinct colors for the phases present in data
+        # Get distinct colors for the phases present in data with gradients
         colors_for_plot = []
         for phase in grouped_data.columns:
-            colors_for_plot.append(phase_colors.get(phase, '#9E9E9E'))  # Default to grey if phase not found
+            base_color = phase_colors.get(phase, '#9E9E9E')
+            colors_for_plot.append(base_color)
 
-        # Enhanced plotting with MUCH NARROWER bars and NO shadows
-        grouped_data.plot(
+        # Enhanced plotting with MUCH NARROWER bars and gradient backgrounds
+        bars = grouped_data.plot(
             kind='bar',
             stacked=True,
             color=colors_for_plot,
@@ -144,6 +162,37 @@ def generate_plot(tickets):
             width=0.25,  # MUCH narrower bars (was 0.4, now 0.25)
             alpha=0.95  # High alpha for vibrant colors
         )
+        
+        # 6. Add subtle gradient backgrounds to bars
+        from matplotlib.colors import LinearSegmentedColormap
+        import matplotlib.patches as mpatches
+        
+        # Apply gradient effect to each bar segment
+        for container in ax.containers:
+            for bar in container:
+                if bar.get_height() > 0:
+                    # Create a subtle gradient effect
+                    x, y = bar.get_xy()
+                    width = bar.get_width()
+                    height = bar.get_height()
+                    
+                    # Get the original color
+                    original_color = bar.get_facecolor()
+                    
+                    # Create a gradient from the original color to a slightly lighter version
+                    gradient = mpatches.Rectangle((x, y), width, height,
+                                                facecolor=original_color,
+                                                edgecolor='white',
+                                                linewidth=1.5,
+                                                alpha=0.95)
+                    
+                    # Add a subtle inner glow effect
+                    inner_rect = mpatches.Rectangle((x + width*0.05, y + height*0.05), 
+                                                  width*0.9, height*0.9,
+                                                  facecolor=original_color,
+                                                  alpha=0.3,
+                                                  edgecolor='none')
+                    ax.add_patch(inner_rect)
 
         # Enhance the axes with better spacing
         ax.set_facecolor('#ffffff')
@@ -216,10 +265,13 @@ def generate_plot(tickets):
                                 fontweight='bold',
                                 bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
 
-        # Fix title overlap with much better spacing
+        # 9. Calculate total aging tickets for subtitle
+        total_aging_tickets = int(grouped_data.sum().sum())
+        
+        # Fix title overlap with much better spacing and move total to subtitle
         plt.suptitle('Aging Tickets',
                      fontsize=24, fontweight='bold', color='#1A237E', y=0.98)  # Even higher
-        plt.title('Tickets created 1+ months ago',
+        plt.title(f'Tickets created 1+ months ago (Total: {total_aging_tickets})',
                   fontsize=16, fontweight='bold', color='#3F51B5', pad=40)  # Much more padding
 
         # Enhanced axis labels with better colors
@@ -238,10 +290,19 @@ def generate_plot(tickets):
         ax.set_xticklabels(truncated_labels, rotation=45, ha='right', fontsize=11, color='#1A237E', fontweight='bold')
         ax.tick_params(axis='y', colors='#1A237E', labelsize=11, width=1.5)
 
-        # Enhanced legend with glossy styling
-        legend = plt.legend(title='Phase', loc='upper right',
+        # Enhanced legend with counts for each phase and correct colors
+        # Calculate total count for each phase across all ticket types
+        phase_totals = grouped_data.sum(axis=0)
+        
+        # Get the legend from the plot (which has correct colors) and move it outside
+        legend = plt.legend(title='Phase', bbox_to_anchor=(1.05, 1), loc='upper left',
                             frameon=True, fancybox=True, shadow=True,
                             title_fontsize=14, fontsize=12)
+        
+        # Update legend labels with counts while preserving colors
+        for i, (phase, text) in enumerate(zip(grouped_data.columns, legend.get_texts())):
+            count = int(phase_totals[phase])
+            text.set_text(f"{phase} ({count})")
         legend.get_frame().set_facecolor('white')
         legend.get_frame().set_alpha(0.95)
         legend.get_frame().set_edgecolor('#1A237E')
@@ -255,7 +316,7 @@ def generate_plot(tickets):
                  alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
 
     plt.tight_layout()
-    plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.95)  # Much more top space
+    plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.80)  # More right space for external legend
 
     today_date = datetime.now().strftime('%m-%d-%Y')
     output_path = root_directory / "web" / "static" / "charts" / today_date / "Aging Tickets.png"
