@@ -16,8 +16,9 @@ from webexpythonsdk import WebexAPI
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-import my_config as config
-from services.xsoar import TicketHandler
+# Import project modules after path setup - necessary due to custom path setup
+import my_config as config  # noqa: E402
+from services.xsoar import TicketHandler  # noqa: E402
 
 config = config.get_config()
 
@@ -74,23 +75,39 @@ def generate_plot(tickets):
                 bbox=dict(boxstyle="round,pad=0.5", facecolor='white', alpha=0.8, edgecolor='#2E8B57', linewidth=2))
         ax.axis('off')
     else:
-        # VIBRANT, GLOSSY color palette with bright, eye-catching colors
+        # Distinct, high-contrast color palette with unique colors for each phase
         phase_colors = {
-            'Investigation': '#FF0080',  # Hot Pink - urgent attention
-            'Containment': '#00FFFF',  # Cyan - contained state
-            'Eradication': '#0080FF',  # Electric Blue - active work
-            'Recovery': '#00FF40',  # Neon Green - recovery mode
-            'Lessons Learned': '#FFFF00',  # Bright Yellow - learning
-            'Unknown': '#FF40FF',  # Magenta - unknown state
-            'New': '#FF4000',  # Red Orange - new items
-            'In Progress': '#4080FF',  # Sky Blue - in progress
-            'Pending': '#FF8000',  # Orange - pending action
-            'Resolved': '#8000FF',  # Purple - resolved
-            '8. Closure': '#FF1744',  # Bright Red - closure issues
-            'Closure': '#FF1744',  # Bright Red - closure phase
-            '': '#FFA500',  # Bright Orange - undefined
-            None: '#FFA500',  # Bright Orange - null
-            'Unassigned': '#808080'  # Gray - unassigned
+            # Incident Response Phases - Sequential color scheme
+            '1. Investigation': '#E91E63',    # Pink - initial phase
+            '2. Containment': '#2196F3',      # Blue - containment
+            '3. Investigation': '#9C27B0',    # Purple - investigation
+            '4. Eradication': '#FF5722',      # Deep Orange - eradication
+            '5. Eradication': '#795548',      # Brown - eradication variant
+            '6. Recovery': '#4CAF50',         # Green - recovery
+            '7. Lessons Learned': '#FFC107',  # Amber - learning
+            '8. Closure': '#F44336',          # Red - closure
+            
+            # Generic phases
+            'Investigation': '#9C27B0',       # Purple - investigation
+            'Containment': '#2196F3',         # Blue - containment  
+            'Eradication': '#FF5722',         # Deep Orange - eradication
+            'Recovery': '#4CAF50',            # Green - recovery
+            'Lessons Learned': '#FFC107',     # Amber - learning
+            'Closure': '#F44336',             # Red - closure
+            'Closure Phase': '#F44336',       # Red - closure phase
+            
+            # Status phases
+            'New': '#FF9800',                 # Orange - new items
+            'In Progress': '#3F51B5',         # Indigo - in progress
+            'Pending': '#FF6F00',             # Dark Orange - pending action
+            'Resolved': '#8BC34A',            # Light Green - resolved
+            'Unknown': '#607D8B',             # Blue Grey - unknown state
+            'Unassigned': '#9E9E9E',          # Grey - unassigned
+            
+            # Special cases
+            '': '#FFEB3B',                    # Yellow - undefined
+            None: '#FFEB3B',                  # Yellow - null
+            'Undefined Phase': '#FFEB3B'      # Yellow - undefined phase
         }
 
         # Group and count tickets by 'type' and 'phase'
@@ -111,18 +128,13 @@ def generate_plot(tickets):
         fig, ax = plt.subplots(figsize=(16, 12), facecolor='#f8f9fa')
         fig.patch.set_facecolor('#f8f9fa')
 
-        # Get VIBRANT colors for the phases present in data
+        # Get distinct colors for the phases present in data
         colors_for_plot = []
         for phase in grouped_data.columns:
-            if phase == 'Undefined Phase':
-                colors_for_plot.append('#FFA500')  # Bright Orange for undefined
-            elif phase == 'Closure Phase':
-                colors_for_plot.append('#FF1744')  # Bright Red for closure
-            else:
-                colors_for_plot.append(phase_colors.get(phase, '#808080'))
+            colors_for_plot.append(phase_colors.get(phase, '#9E9E9E'))  # Default to grey if phase not found
 
         # Enhanced plotting with MUCH NARROWER bars and NO shadows
-        bars = grouped_data.plot(
+        grouped_data.plot(
             kind='bar',
             stacked=True,
             color=colors_for_plot,
@@ -263,8 +275,9 @@ def generate_daily_summary(tickets) -> str | None:
         df = df.dropna(subset=['created'])
         # Make both sides timezone-naive for subtraction
         now = pd.Timestamp.now(tz=eastern).tz_localize(None)
-        df['created'] = df['created'].dt.tz_localize(None)
-        df['age'] = (now - df['created']).dt.days
+        df['created'] = pd.to_datetime(df['created']).dt.tz_localize(None)
+        # Calculate age in days - type: ignore to suppress PyCharm warning about Series/timedelta
+        df['age'] = (now - df['created']).apply(lambda x: x.days)  # type: ignore[operator]
         table = df.groupby('owner').agg({'id': 'count', 'age': 'mean'}).reset_index()
         table = table.rename(columns={'owner': 'Owner', 'id': 'Count', 'age': 'Average Age (days)'})
         table['Average Age (days)'] = table['Average Age (days)'].round(1)
