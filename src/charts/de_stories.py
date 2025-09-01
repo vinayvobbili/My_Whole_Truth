@@ -1,4 +1,5 @@
 import base64
+import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -8,9 +9,13 @@ import pytz
 import requests
 from matplotlib import transforms
 
-from my_config import get_config
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-config = get_config()
+import my_config as config  # noqa: E402
+
+CONFIG = config.get_config()
 eastern = pytz.timezone('US/Eastern')  # Define the Eastern time zone
 
 root_directory = Path(__file__).parent.parent.parent
@@ -21,9 +26,9 @@ class ADOWorkItemRetriever:
         """
         Initialize the ADO Work Item Retriever
         """
-        self.org = config.azdo_org
-        self.project = config.azdo_de_project
-        self.pat = config.azdo_pat
+        self.org = CONFIG.azdo_org
+        self.project = CONFIG.azdo_de_project
+        self.pat = CONFIG.azdo_pat
 
         # Prepare authentication
         self.credentials = base64.b64encode(f":{self.pat}".encode('ascii')).decode('ascii')
@@ -91,34 +96,106 @@ def make_chart():
         state_counts = ado_retriever.get_work_items_by_state()
         # print(f"Recent Work Items Count: {state_counts}")
 
-        # Plot the bar graph
-        plt.figure(figsize=(8, 6))  # Adjust figure size for better readability
-        bars = plt.bar(state_counts.keys(), state_counts.values(), color='#1f77b4', width=0.5)  # Store bar objects
-        plt.xlabel('Work Items Created in the last 180 days')
-        plt.ylabel('Count')
-        plt.title('Detection Engineering AZDO Work Items', fontweight='bold', fontsize=12)
+        # Enhanced color scheme for work item states
+        state_colors = {
+            'New': '#FF9800',  # Orange - New items need attention
+            'Active': '#2196F3',  # Blue - Currently being worked
+            'Resolved': '#4CAF50',  # Green - Completed successfully
+            'Closed': '#8BC34A',  # Light Green - Fully closed
+            'Removed': '#9E9E9E',  # Gray - Removed items
+            'To Do': '#FF5722',  # Deep Orange - Backlog items
+            'In Progress': '#3F51B5',  # Indigo - Active work
+            'Done': '#4CAF50',  # Green - Completed
+            'Approved': '#CDDC39',  # Lime - Approved items
+        }
 
-        # Add count labels on top of each bar
-        for bar in bars:
-            yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width() / 2, yval, yval, va='bottom', ha='center', fontdict={'fontsize': 10, 'fontweight': 'bold'})  # Display count as integer
+        # Create enhanced figure with modern styling
+        fig, ax = plt.subplots(figsize=(14, 10), facecolor='#f8f9fa')
+        fig.patch.set_facecolor('#f8f9fa')
 
+        # Get colors for the bars based on state
+        colors = [state_colors.get(state, '#2196F3') for state in state_counts.keys()]
+        total_items = sum(state_counts.values())
+
+        # Enhanced bar plot
+        bars = ax.bar(list(state_counts.keys()), list(state_counts.values()),
+                      color=colors, edgecolor='white', linewidth=1.5,
+                      alpha=0.9, width=0.6)
+
+        # Enhanced axes styling
+        ax.set_facecolor('#ffffff')
+        ax.grid(False)  # Remove gridlines for cleaner look
+        ax.set_axisbelow(True)
+
+        # Enhanced titles with total count
+        plt.suptitle('Detection Engineering Work Items',
+                     fontsize=24, fontweight='bold', color='#1A237E', y=0.95)
+        ax.set_title(f'AZDO Work Items from last 180 days (Total: {total_items})',
+                     fontsize=16, fontweight='bold', color='#3F51B5', pad=30)
+
+        # Enhanced axis labels
+        ax.set_xlabel('Work Items Created in the last 180 days',
+                      fontsize=14, fontweight='bold', labelpad=15, color='#1A237E')
+        ax.set_ylabel('Count', fontweight='bold', fontsize=14,
+                      labelpad=15, color='#1A237E')
+
+        # Enhanced count labels on bars
+        for bar, state in zip(bars, state_counts.keys()):
+            yval = int(bar.get_height())
+            ax.text(bar.get_x() + bar.get_width() / 2, yval + max(state_counts.values()) * 0.01,
+                    f'{yval}',
+                    va='bottom', ha='center', fontsize=12, fontweight='bold',
+                    color='#1A237E')
+
+        # Enhanced border with rounded corners
+        from matplotlib.patches import FancyBboxPatch
+        border_width = 4
+        fig.patch.set_edgecolor('none')
+        fig.patch.set_linewidth(0)
+
+        fancy_box = FancyBboxPatch(
+            (0, 0), width=1.0, height=1.0,
+            boxstyle="round,pad=0,rounding_size=0.01",
+            edgecolor='#1A237E',
+            facecolor='none',
+            linewidth=border_width,
+            transform=fig.transFigure,
+            zorder=1000,
+            clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
+        # Enhanced timestamp and branding
         now_eastern = datetime.now(eastern).strftime('%m/%d/%Y %I:%M %p %Z')
-        fig = plt.gcf()  # Get the current figure
-
-        # Add a thin black border around the figure
-        fig.patch.set_edgecolor('black')
-        fig.patch.set_linewidth(5)
-
         trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
-        plt.text(0.08, 0.03, now_eastern, ha='left', va='bottom', fontsize=10, transform=trans)
+        fig.text(0.02, 0.02, f"Generated@ {now_eastern}",
+                 ha='left', va='bottom', fontsize=10, color='#1A237E', fontweight='bold',
+                 bbox=dict(boxstyle="round,pad=0.4", facecolor='white', alpha=0.9,
+                           edgecolor='#1A237E', linewidth=1.5),
+                 transform=trans)
 
-        plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for better readability
-        plt.tight_layout()  # Adjust layout to prevent labels from overlapping
+        # Add GS-DnR branding
+        fig.text(0.98, 0.02, 'GS-DnR', ha='right', va='bottom', fontsize=10,
+                 alpha=0.7, color='#3F51B5', style='italic', fontweight='bold',
+                 transform=trans)
+
+        # Enhanced tick styling
+        ax.tick_params(axis='x', rotation=45, colors='#1A237E', labelsize=12, width=1.5)
+        ax.tick_params(axis='y', colors='#1A237E', labelsize=12, width=1.5)
+
+        # Style the spines
+        for spine in ax.spines.values():
+            spine.set_color('#CCCCCC')
+            spine.set_linewidth(1.5)
+
+        # Enhanced layout
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.15, left=0.10, right=0.95)
 
         today_date = datetime.now().strftime('%m-%d-%Y')
         OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "DE Stories.png"
-        plt.savefig(OUTPUT_PATH)
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(OUTPUT_PATH, dpi=300, bbox_inches='tight', pad_inches=0, facecolor='#f8f9fa')
         plt.close(fig)
 
     except requests.exceptions.RequestException as e:

@@ -7,8 +7,12 @@ import pytesseract
 import pytz
 from PIL import Image, ImageDraw, ImageFont
 
-import my_config as config
-from services.xsoar import TicketHandler
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+import my_config as config  # noqa: E402
+from services.xsoar import TicketHandler  # noqa: E402
 
 eastern = pytz.timezone('US/Eastern')
 config = config.get_config()
@@ -50,7 +54,7 @@ class CounterImageModifier:
             "Futura.ttc"  # Added Futura for a more modern look
         ]
 
-        self.number_position = (255, 155)
+        self.number_position = (255, 155)  # Back to original position that fills gray rectangle
 
     def update_counter(self, image_path, days_since_last_incident, last_incident_date, last_incident_id, output_path=None, font_size=None, font_color=None, background_color=None):
         """Updated counter with improved styling and positioning"""
@@ -74,7 +78,9 @@ class CounterImageModifier:
             bbox = draw.textbbox(number_position, text, font=font, anchor="mm")
             padding = 8
 
-            draw.text((200, img.height - 30), f'X#{last_incident_id} was declared as an incident on {last_incident_date}', fill='black', font_size=14)
+            # Fix the None values in bottom text and avoid overlapping watermark
+            incident_text = f'X#{last_incident_id or "N/A"} was declared as an incident on {last_incident_date or "N/A"}'
+            draw.text((20, img.height - 50), incident_text, fill='black', font_size=14)
 
             # Create slightly transparent background
             background = Image.new('RGBA', img.size, (0, 0, 0, 0))
