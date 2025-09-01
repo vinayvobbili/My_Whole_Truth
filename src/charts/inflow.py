@@ -2,10 +2,10 @@ import json
 import re
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
-from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,12 +13,12 @@ import pandas as pd
 import pytz
 from matplotlib import transforms
 
+from my_config import get_config
+from services.xsoar import TicketHandler
+
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from my_config import get_config
-from services.xsoar import TicketHandler
 
 
 @dataclass
@@ -49,9 +49,9 @@ class ColorSchemes:
     IMPACT_COLORS = {
         "Significant": "#ff0000", "Confirmed": "#ffa500",
         "Malicious True Positive": "#b71c1c", "Detected": "#ffd700",
-        "Prevented": "#008000", "Ignore": "#808080",
-        "Benign True Positive": "#388e3c", "Testing": "#add8e6",
-        "Security Testing": "#1976d2", "False Positive": "#90ee90",
+        "Prevented": "#2e7d32", "Ignore": "#808080",
+        "Benign True Positive": "#4caf50", "Testing": "#add8e6",
+        "Security Testing": "#1976d2", "False Positive": "#81c784",
         "Unknown": "#d3d3d3"
     }
 
@@ -60,6 +60,9 @@ class ColorSchemes:
         "Prevented", "Benign True Positive", "False Positive", "Ignore",
         "Testing", "Security Testing", "Unknown"
     ]
+    
+    # Order for visual display with MTP at top (same as IMPACT_ORDER)
+    VISUAL_ORDER = IMPACT_ORDER
 
 
 class ChartStyler:
@@ -247,7 +250,8 @@ class PeriodChart:
     def create_period_chart(self, date_impact_counts: pd.DataFrame,
                             unique_dates: List[Any], tickets: List[Dict[str, Any]], title: str) -> plt.Figure:
         """Create period chart with impact analysis."""
-        fig, ax = plt.subplots(figsize=(20, 12))
+        fig, ax = plt.subplots(figsize=(20, 12), facecolor='#f8f9fa')
+        fig.patch.set_facecolor('#f8f9fa')
         self.styler.apply_base_styling(fig, ax)
 
         dates = [date.strftime('%m/%d') for date in unique_dates]
@@ -257,6 +261,28 @@ class PeriodChart:
         self._plot_stacked_bars(ax, dates, pivot_data, daily_totals)
         self._add_average_line(ax, daily_totals)
         self._configure_period_axes(ax, dates, daily_totals, title, len(tickets))
+
+        # Add enhanced border
+        from matplotlib.patches import FancyBboxPatch
+        border_width = 4
+        fig.patch.set_edgecolor('none')
+        fig.patch.set_linewidth(0)
+
+        fancy_box = FancyBboxPatch(
+            (0, 0), width=1.0, height=1.0,
+            boxstyle="round,pad=0,rounding_size=0.01",
+            edgecolor='#1A237E',
+            facecolor='none',
+            linewidth=border_width,
+            transform=fig.transFigure,
+            zorder=1000,
+            clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
+        # Add final layout adjustments
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.15, left=0.08, right=0.85)
 
         return fig
 
@@ -280,42 +306,58 @@ class PeriodChart:
         x = np.arange(len(dates))
         bottom = np.zeros(len(dates))
 
-        for impact in ColorSchemes.IMPACT_ORDER:
+        for impact in ColorSchemes.VISUAL_ORDER:
             values = pivot_data[impact]
-            ax.bar(x, values, bottom=bottom, label=impact,
-                   color=ColorSchemes.IMPACT_COLORS.get(impact, '#000000'))
-            bottom += values
+            if values.sum() > 0:  # Only plot if there are values
+                ax.bar(x, values, bottom=bottom, label=impact, width=0.8,
+                       color=ColorSchemes.IMPACT_COLORS.get(impact, '#000000'),
+                       edgecolor='white', linewidth=0.5, alpha=0.9)
+                bottom += values
 
-        # Add total labels
+        # Enhanced total labels
         for i, total in enumerate(daily_totals):
             if total > 0:
-                ax.text(x[i], total + 2, f'{int(total)}', ha='center', va='center',
-                        fontsize=10, fontweight='bold',
-                        bbox=dict(boxstyle="circle,pad=0.2", facecolor='black',
-                                  alpha=0.8, edgecolor='white', linewidth=1))
+                ax.text(x[i], total + max(daily_totals) * 0.02, f'{int(total)}',
+                        ha='center', va='bottom', fontsize=10, fontweight='bold',
+                        color='#1A237E',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.95,
+                                  edgecolor='#1A237E', linewidth=1.5))
 
     def _add_average_line(self, ax, daily_totals: np.ndarray) -> None:
         """Add daily average line."""
         daily_average = daily_totals.mean()
-        ax.axhline(daily_average, color='blue', linestyle='--', linewidth=1.5,
-                   label=f'Daily Average ({int(daily_average)})')
+        ax.axhline(daily_average, color='blue', linestyle='--', linewidth=2.5,
+                   label=f'Daily Average ({int(daily_average)})', alpha=0.8)
 
     def _configure_period_axes(self, ax, dates: List[str], daily_totals: np.ndarray,
                                title: str, ticket_count: int) -> None:
         """Configure axes for period chart."""
         x = np.arange(len(dates))
         ax.set_xticks(x)
-        ax.set_ylim(0, daily_totals.max() * 1.1)
+        ax.set_ylim(0, daily_totals.max() * 1.15)
 
         # Show every 5th label to prevent crowding
         date_labels = [dates[i] if i % 5 == 0 else "" for i in range(len(dates))]
-        ax.set_xticklabels(date_labels, rotation=45, ha='right', fontsize=8)
+        ax.set_xticklabels(date_labels, rotation=45, ha='right', fontsize=10, fontweight='bold')
+        ax.tick_params(axis='y', colors='#1A237E', labelsize=12, width=1.5)
+        ax.tick_params(axis='x', colors='#1A237E', labelsize=10, width=1.5, pad=10)
 
-        ax.set_xlabel("Created Date", fontweight='bold', fontsize=12, labelpad=10)
-        ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=10)
-        ax.set_title(f"{title}\nTotal: {ticket_count} tickets", fontsize=12, ha='center')
+        ax.set_xlabel("Created Date", fontweight='bold', fontsize=14, labelpad=15, color='#1A237E')
+        ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=14, color='#1A237E')
 
-        ax.legend(title='Impact', title_fontproperties={'weight': 'bold'})
+        # Enhanced titles
+        plt.suptitle(title, fontweight='bold', fontsize=24, color='#1A237E', y=0.95)
+        ax.set_title(f"Total: {ticket_count} tickets", fontsize=16, color='#3F51B5', pad=20, fontweight='bold')
+
+        # Enhanced legend with consistent order (MTP at top)
+        legend = ax.legend(title='Impact',
+                           title_fontproperties={'weight': 'bold', 'size': 14},
+                           loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=11,
+                           frameon=True, fancybox=True, shadow=True)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.95)
+        legend.get_frame().set_edgecolor('#1A237E')
+        legend.get_frame().set_linewidth(2)
 
 
 class TicketChartGenerator:
@@ -444,7 +486,8 @@ class TicketChartGenerator:
     def _create_monthly_impact_chart(self, expected_months: List[Any], month_labels: List[str],
                                      month_impact_counts: pd.DataFrame, tickets: List[Dict[str, Any]]) -> plt.Figure:
         """Create monthly impact distribution chart."""
-        fig, ax = plt.subplots(figsize=(20, 12))
+        fig, ax = plt.subplots(figsize=(20, 12), facecolor='#f8f9fa')
+        fig.patch.set_facecolor('#f8f9fa')
         self.styler.apply_base_styling(fig, ax)
 
         # Create pivot data
@@ -461,7 +504,7 @@ class TicketChartGenerator:
         x_pos = np.arange(len(month_labels))
         impact_bottom = np.zeros(len(expected_months))
 
-        for impact in ColorSchemes.IMPACT_ORDER:
+        for impact in ColorSchemes.VISUAL_ORDER:
             values = impact_pivot_data[impact]
             if values.sum() > 0:
                 ax.bar(x_pos, values, bottom=impact_bottom, width=0.4,
@@ -475,29 +518,31 @@ class TicketChartGenerator:
         ax.plot(x_pos, monthly_totals, color='red', marker='o', markersize=8,
                 linewidth=2.5, label='Monthly Volume', zorder=10)
 
-        # Add count labels
+        # Enhanced count labels with better styling
         for i, total in enumerate(monthly_totals):
             if total > 0:
                 ax.text(x_pos[i], total + 20, f'{int(total)}',
                         ha='center', va='bottom', fontsize=12, fontweight='bold',
-                        bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', pad=2))
+                        color='#1A237E',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.95,
+                                  edgecolor='#1A237E', linewidth=1.5))
 
-        # Configure axes
+        # Configure axes with enhanced styling
         ax.set_xticks(x_pos)
         ax.set_ylim(0, impact_bottom.max() * 1.15)
-        ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12)
-        ax.tick_params(axis='y', colors=self.chart_config.border_color, labelsize=12)
-        ax.tick_params(axis='x', colors=self.chart_config.border_color, labelsize=12)
+        ax.set_xticklabels(month_labels, rotation=45, ha='right', fontsize=12, fontweight='bold')
+        ax.tick_params(axis='y', colors=self.chart_config.border_color, labelsize=12, width=1.5)
+        ax.tick_params(axis='x', colors=self.chart_config.border_color, labelsize=12, width=1.5, pad=10)
 
-        # Titles and legend
+        # Enhanced titles and subtitle
         fig.suptitle('Impact Distribution Over the Past 12 Months',
-                     fontweight='bold', fontsize=22, color=self.chart_config.border_color)
-        ax.set_title(f"Total: {len(tickets)} tickets", fontsize=14,
-                     color=self.chart_config.border_color)
+                     fontweight='bold', fontsize=24, color=self.chart_config.border_color, y=0.95)
+        ax.set_title(f"Total: {len(tickets)} tickets", fontsize=16,
+                     color='#3F51B5', pad=20, fontweight='bold')
         ax.set_ylabel("Number of Tickets", fontweight='bold', fontsize=14,
-                      color=self.chart_config.border_color)
+                      color=self.chart_config.border_color, labelpad=15)
 
-        # Add legend with counts
+        # Enhanced legend with counts and better positioning
         handles, labels = ax.get_legend_handles_labels()
         impact_totals = {impact: impact_pivot_data[impact].sum() for impact in ColorSchemes.IMPACT_ORDER}
         custom_labels = []
@@ -509,7 +554,10 @@ class TicketChartGenerator:
 
         legend = ax.legend(handles, custom_labels, title="Impact",
                            title_fontproperties={'weight': 'bold', 'size': 14},
-                           loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=12)
+                           loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=11,
+                           frameon=True, fancybox=True, shadow=True)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.95)
         legend.get_frame().set_edgecolor(self.chart_config.border_color)
         legend.get_frame().set_linewidth(2)
 
@@ -517,13 +565,31 @@ class TicketChartGenerator:
 
     def _finalize_and_save_chart(self, fig: plt.Figure, filename: str) -> None:
         """Apply final styling and save chart."""
-        self.styler.add_border(fig)
+        # Enhanced border with rounded corners
+        from matplotlib.patches import FancyBboxPatch
+        border_width = 4
+        fig.patch.set_edgecolor('none')
+        fig.patch.set_linewidth(0)
+
+        fancy_box = FancyBboxPatch(
+            (0, 0), width=1.0, height=1.0,
+            boxstyle="round,pad=0,rounding_size=0.01",
+            edgecolor='#1A237E',
+            facecolor='none',
+            linewidth=border_width,
+            transform=fig.transFigure,
+            zorder=1000,
+            clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
         self.styler.add_timestamp(fig)
         self.styler.add_watermark(fig)
 
         plt.tight_layout()
+        plt.subplots_adjust(top=0.88, bottom=0.12, left=0.08, right=0.85)
         output_path = self.output_dir / filename
-        plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+        plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300, facecolor='#f8f9fa')
         plt.close(fig)
 
     def generate_all_charts(self) -> None:
