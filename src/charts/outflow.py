@@ -33,7 +33,7 @@ with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
 QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" closed:>={start} closed:<{end}'
 
 # Define a custom order for the impacts
-CUSTOM_IMPACT_ORDER = ["Significant", "Confirmed", "Detected", "Prevented", "Ignore", "Testing", "Security Testing", "False Positive", "Benign True Positive", "Malicious True Positive"]
+CUSTOM_IMPACT_ORDER = ["Confirmed", "Detected", "Prevented", "Ignore", "Testing", "Security Testing", "False Positive", "Benign True Positive", "Malicious True Positive", "Unknown", "Resolved"]
 
 # --- Logo Configuration ---
 LOGO_DIR = "web/static/logos"  # Directory where logos are stored
@@ -99,18 +99,19 @@ def create_graph(tickets):
     mid_index = len(sorted_sources) // 2
     pyramid_sources = sorted_sources[mid_index::-1] + sorted_sources[mid_index + 1:]
 
-    # Define Colors for impacts with enhanced professional palette
+    # Define Colors for impacts matching the target chart
     impact_colors = {
-        "Malicious True Positive": "#DC2626",  # Modern red
-        "Confirmed": "#EA580C",  # Modern orange
-        "Detected": "#CA8A04",  # Modern amber
-        "Prevented": "#16A34A",  # Modern green
-        "Ignore": "#1F2937",  # Dark gray
-        "Testing": "#10B981",  # Emerald
-        "Security Testing": "#059669",  # Dark emerald
-        "False Positive": "#9CA3AF",  # Light gray
-        "Benign True Positive": "#6B7280",  # Medium gray
-        "Unknown": "#3B82F6"  # Modern blue
+        "Confirmed": "#ff6b6b",  # Red
+        "Detected": "#ffa726",  # Orange  
+        "Prevented": "#66bb6a",  # Green
+        "Ignore": "#424242",  # Dark gray
+        "Testing": "#4dd0e1",  # Light cyan
+        "Security Testing": "#26a69a",  # Teal
+        "False Positive": "#ef5350",  # Light red
+        "Benign True Positive": "#9e9e9e",  # Gray
+        "Malicious True Positive": "#d32f2f",  # Dark red
+        "Unknown": "#7986cb",  # Blue
+        "Resolved": "#ab47bc"  # Purple
     }
 
     # Enhanced figure with better proportions and styling

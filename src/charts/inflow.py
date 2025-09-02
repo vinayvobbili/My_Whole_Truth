@@ -133,28 +133,16 @@ class ChartStyler:
 class DataProcessor:
     """Handles data processing and transformation."""
 
-    @staticmethod
-    def load_source_abbreviations() -> Dict[str, str]:
-        """Load detection source name abbreviations."""
-        root_dir = Path(__file__).parent.parent.parent
-        file_path = root_dir / 'data' / 'metrics' / 'detection_source_name_abbreviations.json'
-
-        with open(file_path, 'r') as f:
-            return json.load(f)
 
     @staticmethod
     def process_tickets_for_inflow(tickets: List[Dict]) -> pd.DataFrame:
         """Process tickets for inflow analysis."""
         df = pd.DataFrame(tickets)
-        df['source'] = df['CustomFields'].apply(lambda x: x.get('detectionsource', 'Unknown'))
+        df['ticket_type'] = df['type'].fillna('Unknown')
         df['severity'] = df['severity'].fillna('Unknown')
 
-        source_abbrev = DataProcessor.load_source_abbreviations()
-        for pattern, replacement in source_abbrev.items():
-            df['source'] = df['source'].str.replace(pattern, replacement, regex=True, flags=re.IGNORECASE)
-
-        df['source'] = df['source'].replace('', 'Unknown')
-        return df.groupby(['source', 'severity']).size().reset_index(name='count')
+        df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
+        return df.groupby(['ticket_type', 'severity']).size().reset_index(name='count')
 
     @staticmethod
     def process_tickets_for_period(tickets: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, List[Any]]:
@@ -186,7 +174,7 @@ class StackedBarChart:
         fig, ax = plt.subplots(figsize=self.styler.config.figure_size)
         self.styler.apply_base_styling(fig, ax)
 
-        df_pivot = df.pivot_table(index='source', columns='severity', values='count', fill_value=0)
+        df_pivot = df.pivot_table(index='ticket_type', columns='severity', values='count', fill_value=0)
         colors = [ColorSchemes.SEVERITY_COLORS.get(str(sev), "#6B7280")
                   for sev in df_pivot.columns]
 
@@ -194,7 +182,7 @@ class StackedBarChart:
                       width=0.6, edgecolor="white", linewidth=1.5, alpha=0.95)
 
         self._add_value_labels(ax)
-        self._configure_axes(ax, "Detection Source", "Number of Alerts", title)
+        self._configure_axes(ax, "Ticket Type", "Number of Alerts", title)
         self._add_legend(ax, 'Severity')
 
         max_value = df_pivot.sum(axis=1).max()
