@@ -4,6 +4,9 @@ import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+import urllib.request
+import ssl
+from io import BytesIO
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -32,24 +35,74 @@ with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
 
 QUERY_TEMPLATE = 'type:{ticket_type_prefix} -owner:"" closed:>={start} closed:<{end}'
 
+
+def download_and_cache_logo(logo_url, logo_filename):
+    """Download a logo from URL and cache it locally"""
+    logo_path = LOGO_DIR / logo_filename
+    
+    # If logo already exists, return the path
+    if logo_path.exists():
+        return logo_path
+    
+    try:
+        # Create SSL context that doesn't verify certificates
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        # Create request with User-Agent to avoid 403 errors
+        request = urllib.request.Request(logo_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        
+        # Download and save logo
+        with urllib.request.urlopen(request, context=ssl_context) as response:
+            image_data = response.read()
+        
+        # Save the original logo data directly without processing
+        with open(logo_path, 'wb') as f:
+            f.write(image_data)
+        print(f"Downloaded and cached logo: {logo_filename}")
+        return logo_path
+        
+    except Exception as e:
+        print(f"Error downloading logo from {logo_url}: {e}")
+        return None
+
 # Define a custom order for the impacts
 CUSTOM_IMPACT_ORDER = ["Confirmed", "Detected", "Prevented", "Ignore", "Testing", "Security Testing", "False Positive", "Benign True Positive", "Malicious True Positive", "Unknown", "Resolved"]
 
 # --- Logo Configuration ---
-LOGO_DIR = "web/static/logos"  # Directory where logos are stored
-LOGO_SIZE = 0.04  # Size of the logo relative to the figure width (adjust as needed)
+LOGO_DIR = ROOT_DIRECTORY / "web" / "static" / "logos"  # Directory where logos are stored
 
-# Create a mapping of detection sources to logo file names (lowercase for matching)
-LOGO_MAPPING = {
-    "crowdstrike": "crowdstrike.png",
-    "sentinelone": "sentinelone.png",
-    "microsoft defender": "microsoft_defender.png",
-    "cofense": "cofense.png",
-    "proofpoint": "proofpoint.png",
-    "virustotal": "virustotal.png",
-    "trendmicro": "trendmicro.png",
-    "mcafee": "mcafee.png",
-    "checkpoint": "checkpoint.png"
+# Individual logo sizes for optimal appearance
+CROWDSTRIKE_LOGO_SIZE = 0.02  # CrowdStrike falcon logos
+VECTRA_LOGO_SIZE = 0.08       # Vectra logos
+PRISMA_LOGO_SIZE = 0.08       # Prisma Cloud logos  
+THIRD_PARTY_LOGO_SIZE = 0.08  # Third party compromise
+EMPLOYEE_REPORT_LOGO_SIZE = 0.08  # Employee report
+CASE_LOGO_SIZE = 0.03         # Case logos (smaller)
+QRADAR_LOGO_SIZE = 0.05       # QRadar logos
+DEFAULT_LOGO_SIZE = 0.05      # Default for others
+
+# Create a mapping of detection sources to logo URLs and filenames
+LOGO_URL_MAPPING = {
+    "cs detection": ("https://companieslogo.com/img/orig/CRWD-442a5e7d.png?t=1648651763", "crowdstrike.png"),
+    "cs incident": ("https://companieslogo.com/img/orig/CRWD-442a5e7d.png?t=1648651763", "crowdstrike.png"),
+    "crowdstrike detection": ("https://companieslogo.com/img/orig/CRWD-442a5e7d.png?t=1648651763", "crowdstrike.png"),
+    "crowdstrike incident": ("https://companieslogo.com/img/orig/CRWD-442a5e7d.png?t=1648651763", "crowdstrike.png"),
+    "prisma compute": ("https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_f24901e9b516e0c419136a22214e9e4f/palo-alto-networks-prisma-cloud.png", "prisma_cloud.png"),
+    "prisma runtime": ("https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_f24901e9b516e0c419136a22214e9e4f/palo-alto-networks-prisma-cloud.png", "prisma_cloud.png"),
+    "prisma cloud": ("https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_f24901e9b516e0c419136a22214e9e4f/palo-alto-networks-prisma-cloud.png", "prisma_cloud.png"),
+    "ueba prisma": ("https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_f24901e9b516e0c419136a22214e9e4f/palo-alto-networks-prisma-cloud.png", "prisma_cloud.png"),
+    "splunk alert": ("https://logos-world.net/wp-content/uploads/2021/08/Splunk-Logo.png", "splunk.png"),
+    "qradar alert": ("https://tse3.mm.bing.net/th/id/OIP.CAdOtgtsDWXIx1oIBPQ55QAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3", "qradar.png"),
+    "vectra detection": ("https://images.g2crowd.com/uploads/product/image/social_landscape/social_landscape_0851751a52d7a99e332527e5918d321b/vectra-ai.png", "vectra.png"),
+    "third party compromise": ("https://cdn-icons-png.flaticon.com/512/2092/2092063.png", "third_party.png"),
+    "employee report": ("https://cdn-icons-png.flaticon.com/512/1077/1077114.png", "employee_report.png"),
+    "case": ("https://static.vecteezy.com/system/resources/previews/006/593/081/non_2x/security-alert-concepts-vector.jpg", "case.png"),
+    "lost/stolen device": ("https://cdn-icons-png.flaticon.com/512/3437/3437364.png", "lost_stolen_device.png"),
+    "unknown": ("https://cdn-icons-png.flaticon.com/512/2534/2534590.png", "unknown.png")
 }
 
 
@@ -162,37 +215,62 @@ def create_graph(tickets):
 
         bottom = [b + c for b, c in zip(bottom, counts)]
 
-        # --- Add Logos at the End of Bars ---
-        for i, bar in enumerate(bars):
-            if counts[i] == 0:
-                continue  # no logo on empty bars
+    # --- Add Logos at the End of Bars (after all impacts are plotted) ---
+    for i, source in enumerate(pyramid_sources):
+        if bottom[i] == 0:  # Skip rows with no data
+            continue
 
-            source = pyramid_sources[i]
-            logo_filename = LOGO_MAPPING.get(source.lower())  # match logo with a source
+        logo_info = LOGO_URL_MAPPING.get(source.lower())  # match logo with a source
 
-            if logo_filename:  # If a logo is found for the source
-                logo_path = os.path.join(LOGO_DIR, logo_filename)
-                if os.path.exists(logo_path):  # Verify that the logo file exists
-                    try:
-                        # Resize logo
-                        im = Image.open(logo_path)
-                        width, height = im.size
-                        max_size = 50  # max size for the logo
-                        if max(width, height) > max_size:
-                            if width > height:
-                                new_width = max_size
-                                new_height = int(max_size * (height / width))
-                            else:
-                                new_height = max_size
-                                new_width = int(max_size * (width / height))
-                            im = im.resize((new_width, new_height))
-                        im.save(logo_path)
-                        image = plt.imread(logo_path)
-                        imagebox = OffsetImage(image, zoom=LOGO_SIZE)
-                        ab = AnnotationBbox(imagebox, (bar.get_width() + bottom[i], bar.get_y() + bar.get_height() / 2), frameon=False)
-                        ax.add_artist(ab)
-                    except Exception as e:
-                        print(f"Error adding logo {logo_filename}: {e}")
+        if logo_info:  # If a logo mapping is found for the source
+            logo_url, logo_filename = logo_info
+            
+            # Download and cache the logo (or use existing cached version)
+            logo_path = download_and_cache_logo(logo_url, logo_filename)
+            
+            if logo_path and logo_path.exists():
+                try:
+                    # Load image from local file
+                    image = Image.open(logo_path)
+                    
+                    # Convert to RGBA and add white background
+                    if image.mode != 'RGBA':
+                        image = image.convert('RGBA')
+                    
+                    # Create white background
+                    white_bg = Image.new('RGBA', image.size, (255, 255, 255, 255))
+                    # Composite the logo onto white background
+                    image_with_bg = Image.alpha_composite(white_bg, image)
+                    # Convert back to RGB for matplotlib
+                    image_with_bg = image_with_bg.convert('RGB')
+                    
+                    # Determine logo size based on source type
+                    source_lower = source.lower()
+                    if any(crowdstrike_key in source_lower for crowdstrike_key in ["cs detection", "cs incident", "crowdstrike"]):
+                        logo_size = CROWDSTRIKE_LOGO_SIZE
+                    elif "vectra" in source_lower:
+                        logo_size = VECTRA_LOGO_SIZE
+                    elif any(prisma_key in source_lower for prisma_key in ["prisma", "ueba prisma"]):
+                        logo_size = PRISMA_LOGO_SIZE
+                    elif "third party" in source_lower:
+                        logo_size = THIRD_PARTY_LOGO_SIZE
+                    elif "employee report" in source_lower:
+                        logo_size = EMPLOYEE_REPORT_LOGO_SIZE
+                    elif "case" in source_lower:
+                        logo_size = CASE_LOGO_SIZE
+                    elif "qradar" in source_lower:
+                        logo_size = QRADAR_LOGO_SIZE
+                    else:
+                        logo_size = DEFAULT_LOGO_SIZE
+                    
+                    # Create matplotlib image
+                    imagebox = OffsetImage(image_with_bg, zoom=logo_size)  # Use source-specific logo size
+                    x_pos = bottom[i] + max(bottom) * 0.005  # Position very close to bar end
+                    ab = AnnotationBbox(imagebox, (x_pos, i), frameon=False, xycoords='data',
+                                        box_alignment=(0, 0.5))
+                    ax.add_artist(ab)
+                except Exception as e:
+                    print(f"Error adding logo {logo_filename}: {e}")
 
     # Enhanced axes styling
     ax.set_facecolor('#ffffff')
