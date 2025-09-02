@@ -83,10 +83,15 @@ def create_graph(tickets):
     # Simplify to show only ticket types without detection sources
     df['source'] = df.apply(lambda row: row['type']
                             .replace(config.team_name, '').strip()
+                            .replace('METCIRT', '').strip()
                             .replace('CrowdStrike Falcon Detection', 'CS Detection').strip()
                             .replace('CrowdStrike Falcon Incident', 'CS Incident').strip()
-                            .replace('Prisma Cloud Compute Runtime Alert', 'Prisma Runtime').strip()
-                            .replace('Lost or Stolen Computer', 'Lost/Stolen Device').strip(), axis=1)
+                            .replace('Prisma Cloud Compute Runtime Alert', 'Prisma Compute').strip()
+                            .replace('Prisma Cloud Runtime Alert', 'Prisma Runtime').strip()
+                            .replace('Lost or Stolen Computer', 'Lost/Stolen Device').strip()
+                            .replace('Splunk Alert', 'Splunk Alert').strip()
+                            .replace('Employee Reported Incident', 'Employee Report').strip()
+                            .replace('UEBA Prisma Cloud', 'UEBA Prisma').strip(), axis=1)
 
     # Count the occurrences of each source and impact
     source_impact_counts = df.groupby(['source', 'impact']).size().reset_index(name='count')
@@ -196,8 +201,7 @@ def create_graph(tickets):
 
     # Style the spines
     for spine in ax.spines.values():
-        spine.set_color('#CCCCCC')
-        spine.set_linewidth(1.5)
+        spine.set_visible(False)
 
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
@@ -207,7 +211,7 @@ def create_graph(tickets):
 
     # Enhanced border with rounded corners like MTTR chart
     from matplotlib.patches import FancyBboxPatch
-    border_width = 4
+    border_width = 2
     fig.patch.set_edgecolor('none')
     fig.patch.set_linewidth(0)
 
@@ -235,13 +239,13 @@ def create_graph(tickets):
 
     # Calculate impact totals for legend
     impact_totals = df.groupby('impact')['impact'].count().to_dict()
-    
+
     # Update legend labels with counts
     impact_labels = []
     for impact in sorted_impacts:
         count = impact_totals.get(impact, 0)
         impact_labels.append(f"{impact} ({count})")
-    
+
     # Enhanced legend positioned outside like MTTR chart
     legend = ax.legend(impact_labels, title='Impact', loc='upper left', bbox_to_anchor=(1.15, 1),
                        frameon=True, fancybox=True, shadow=True,
@@ -250,7 +254,7 @@ def create_graph(tickets):
     legend.get_frame().set_alpha(0.95)
     legend.get_frame().set_edgecolor('#1A237E')
     legend.get_frame().set_linewidth(2)
-    
+
     # Make legend title bold
     legend.get_title().set_fontweight('bold')
 
@@ -276,7 +280,7 @@ def create_graph(tickets):
     today_date = datetime.now().strftime('%m-%d-%Y')
     output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
     output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
-    plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+    plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.0, dpi=300)
     plt.close(fig)
 
 
