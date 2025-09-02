@@ -28,7 +28,7 @@ class ChartConfig:
     font_family: List[str] = None
     background_color: str = '#f8f9fa'
     border_color: str = '#1A237E'
-    border_width: int = 6
+    border_width: int = 4
 
     def __post_init__(self):
         if self.font_family is None:
@@ -60,7 +60,7 @@ class ColorSchemes:
         "Prevented", "Benign True Positive", "False Positive", "Ignore",
         "Testing", "Security Testing", "Unknown"
     ]
-    
+
     # Order for visual display with MTP at top (same as IMPACT_ORDER)
     VISUAL_ORDER = IMPACT_ORDER
 
@@ -85,8 +85,7 @@ class ChartStyler:
         ax.grid(False)
 
         for spine in ax.spines.values():
-            spine.set_color('#CCCCCC')
-            spine.set_linewidth(1.5)
+            spine.set_visible(False)
 
     def add_border(self, fig):
         """Add blue rounded border to figure."""
@@ -133,7 +132,6 @@ class ChartStyler:
 class DataProcessor:
     """Handles data processing and transformation."""
 
-
     @staticmethod
     def process_tickets_for_inflow(tickets: List[Dict]) -> pd.DataFrame:
         """Process tickets for inflow analysis."""
@@ -142,6 +140,17 @@ class DataProcessor:
         df['severity'] = df['severity'].fillna('Unknown')
 
         df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
+        # Remove METCIRT prefix from ticket type names
+        df['ticket_type'] = df['ticket_type'].str.replace(r'^METCIRT\s*', '', regex=True)
+        # Shorten long ticket type names
+        df['ticket_type'] = df['ticket_type'].replace({
+            'CrowdStrike Falcon Detection': 'Crowdstrike Detection',
+            'CrowdStrike Falcon Incident': 'Crowdstrike Incident',
+            'Prisma Cloud Runtime Alert': 'Prisma Runtime',
+            'Prisma Cloud Compute Runtime Alert': 'Prisma Compute',
+            'Splunk Alert': 'Splunk Alert',
+            'UEBA Prisma Cloud': 'UEBA Prisma'
+        })
         return df.groupby(['ticket_type', 'severity']).size().reset_index(name='count')
 
     @staticmethod
@@ -189,7 +198,6 @@ class StackedBarChart:
         ax.set_ylim(0, max_value + 3)
         ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
 
-        self.styler.add_border(fig)
         return fig
 
     def _add_value_labels(self, ax) -> None:
@@ -217,7 +225,7 @@ class StackedBarChart:
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right',
                            fontsize=10, color=self.styler.config.border_color)
         ax.tick_params(axis='y', labelsize=10, colors=self.styler.config.border_color)
-        ax.tick_params(axis='x', pad=20)
+        ax.tick_params(axis='x', pad=5)
 
     def _add_legend(self, ax, title: str) -> None:
         """Add styled legend."""
@@ -575,7 +583,7 @@ class TicketChartGenerator:
         self.styler.add_watermark(fig)
 
         plt.tight_layout()
-        plt.subplots_adjust(top=0.88, bottom=0.12, left=0.08, right=0.85)
+        plt.subplots_adjust(top=0.88, bottom=0.23, left=0.08, right=0.85)
         output_path = self.output_dir / filename
         plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300, facecolor='#f8f9fa')
         plt.close(fig)
