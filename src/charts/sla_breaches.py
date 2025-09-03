@@ -269,7 +269,7 @@ def save_sla_breaches_chart(ticket_slas_by_periods):
     today_date = datetime.now().strftime('%m-%d-%Y')
     output_path = root_directory / "web" / "static" / "charts" / today_date / "SLA Breaches.png"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches=None)
     plt.close(fig)
 
 

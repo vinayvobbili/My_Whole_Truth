@@ -583,7 +583,7 @@ class TicketChartGenerator:
         plt.tight_layout()
         plt.subplots_adjust(top=0.88, bottom=0.23, left=0.08, right=0.85)
         output_path = self.output_dir / filename
-        plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.0, dpi=300, facecolor='#f8f9fa')
+        plt.savefig(output_path, format='png', bbox_inches=None, pad_inches=0.0, dpi=300, facecolor='#f8f9fa')
         plt.close(fig)
 
     def generate_all_charts(self) -> None:
