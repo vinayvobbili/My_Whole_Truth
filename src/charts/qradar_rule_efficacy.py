@@ -252,14 +252,15 @@ class QRadarEfficacyChart:
         fig.patch.set_edgecolor('none')
         fig.patch.set_linewidth(0)
 
+        # Create border around the entire figure with increased width
         fancy_box = FancyBboxPatch(
-            (0, 0), width=1.0, height=1.0,
+            (-0.05, 0), width=1.1, height=1.0,
             boxstyle="round,pad=0,rounding_size=0.01",
             edgecolor='#1A237E',
             facecolor='none',
             linewidth=border_width,
             transform=fig.transFigure,
-            zorder=1000,
+            zorder=-10,  # Put behind everything
             clip_on=False
         )
         fig.patches.append(fancy_box)
@@ -271,13 +272,13 @@ class QRadarEfficacyChart:
 
         # Save the chart with enhanced layout
         today_date = datetime.now().strftime('%m-%d-%Y')
-        OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        output_path = OUTPUT_DIR / output_filename
+        output_dir = root_directory / "web" / "static" / "charts" / today_date
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / output_filename
 
         # Enhanced layout with space for external legend
         plt.tight_layout()
-        plt.subplots_adjust(top=0.88, bottom=0.15, left=0.20, right=0.82)
+        plt.subplots_adjust(top=0.92, bottom=0.12, left=0.02, right=0.98)
 
         plt.savefig(output_path, format="png", dpi=300, bbox_inches='tight',
                     pad_inches=0, facecolor='#f8f9fa')
@@ -347,10 +348,10 @@ def send_charts() -> None:
     recipient_email = CONFIG.efficacy_charts_receiver
     files = ['QR Rule Efficacy-Quarter.png', 'QR Rule Efficacy-Month.png', 'QR Rule Efficacy-Week.png']
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_DIR = root_directory / "web" / "static" / "charts" / today_date
+    output_dir = root_directory / "web" / "static" / "charts" / today_date
     try:
         for file in files:
-            webex.messages.create(toPersonEmail=recipient_email, files=[f'{OUTPUT_DIR / file}'])
+            webex.messages.create(toPersonEmail=recipient_email, files=[f'{output_dir / file}'])
         log.info(f"Chart sent to {recipient_email}")
     except Exception as e:
         log.error(f"Error sending chart: {e}", exc_info=True)
