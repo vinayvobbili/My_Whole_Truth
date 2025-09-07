@@ -65,13 +65,13 @@ def get_lifespan_chart(tickets):
 
     # Enhanced professional color scheme for IR workflow phases
     colors = {
-        'closure': '#2E7D32',      # Dark green - final completion
-        'lessons': '#1976D2',      # Blue - lessons learned
-        'eradicate': '#FF9800',    # Orange - eradication phase
-        'investigate': '#F44336',   # Red - investigation phase  
-        'triage': '#9C27B0'        # Purple - initial triage
+        'closure': '#2E7D32',  # Dark green - final completion
+        'lessons': '#1976D2',  # Blue - lessons learned
+        'eradicate': '#FF9800',  # Orange - eradication phase
+        'investigate': '#F44336',  # Red - investigation phase
+        'triage': '#9C27B0'  # Purple - initial triage
     }
-    
+
     fig, ax = plt.subplots(figsize=(14, 10), facecolor='#f8f9fa')
     fig.patch.set_facecolor('#f8f9fa')
     ax.set_facecolor('#ffffff')
@@ -82,10 +82,10 @@ def get_lifespan_chart(tickets):
     phase_order = ['closure', 'lessons', 'eradicate', 'investigate', 'triage']
     for col in phase_order:
         df_days[col] = df[col] / 24  # Convert hours to days
-    
+
     bar_width = 0.6
     bottoms = pd.Series(0, index=df_days.index)
-    
+
     for col in phase_order:
         ax.bar(df_days['type'], df_days[col], label=col.capitalize(), bottom=bottoms,
                color=colors[col], width=bar_width, edgecolor='white', linewidth=1.5, alpha=0.9)
@@ -97,24 +97,24 @@ def get_lifespan_chart(tickets):
                  fontsize=24, fontweight='bold', color='#1A237E', y=0.96)
     ax.set_title(f'Ticket processing time distribution (last 30 days) - Total: {int(total_tickets)} tickets',
                  fontsize=14, color='#3F51B5', pad=25, fontweight='bold')
-    
+
     ax.set_xlabel("Ticket Type", fontweight='bold', fontsize=14, labelpad=15, color='#1A237E')
     ax.set_ylabel("Days", fontweight='bold', fontsize=14, labelpad=15, color='#1A237E')
-    
+
     # Enhanced tick styling
     ax.tick_params(axis='x', rotation=45, colors='#1A237E', labelsize=12, width=1.5, pad=10)
     ax.tick_params(axis='y', colors='#1A237E', labelsize=12, width=1.5)
     plt.setp(ax.get_xticklabels(), ha='right', fontweight='bold')
-    
+
     # Enhanced legend with counts in days
     legend_labels = []
     for phase in phase_order:
         total_days = df[phase].sum() / 24  # Convert hours to days
         legend_labels.append(f"{phase.capitalize()} ({total_days:.1f}d)")
-    
-    legend = ax.legend(legend_labels, title='Phase (Total Days)', 
+
+    legend = ax.legend(legend_labels, title='Phase (Total Days)',
                        title_fontproperties={'weight': 'bold', 'size': 14},
-                       loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=12, 
+                       loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=12,
                        frameon=True, fancybox=True, shadow=True)
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(0.95)
@@ -125,8 +125,8 @@ def get_lifespan_chart(tickets):
     for i, (_, row) in enumerate(df_days.iterrows()):
         total_height_days = row[phase_order].sum()
         total_days = int(total_height_days)
-        ticket_count = int(row['count'])
-        ax.text(i, total_height_days + max(df_days[phase_order].sum(axis=1)) * 0.02, 
+        ticket_count = int(row['count'].iloc[0] if hasattr(row['count'], 'iloc') else row['count'])
+        ax.text(i, total_height_days + max(df_days[phase_order].sum(axis=1)) * 0.02,
                 f'{total_days}d\n({ticket_count} tickets)',
                 ha='center', va='bottom', fontsize=10, fontweight='bold', color='#1A237E',
                 bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.95,
@@ -163,7 +163,7 @@ def get_lifespan_chart(tickets):
     fig.text(0.98, 0.02, 'GS-DnR', ha='right', va='bottom', fontsize=10,
              alpha=0.7, color='#3F51B5', style='italic', fontweight='bold',
              transform=trans)
-             
+
     # Style the spines
     for spine in ax.spines.values():
         spine.set_color('#CCCCCC')
@@ -173,10 +173,11 @@ def get_lifespan_chart(tickets):
     plt.subplots_adjust(top=0.85, bottom=0.18, left=0.10, right=0.75)
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    OUTPUT_PATH = root_directory / "web" / "static" / "charts" / today_date / "Lifespan.png"
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(OUTPUT_PATH, format="png", dpi=300, bbox_inches='tight', pad_inches=0.1, facecolor='#f8f9fa')
+    output_path = root_directory / "web" / "static" / "charts" / today_date / "Lifespan.png"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, format="png", dpi=300, bbox_inches=None, pad_inches=0.1, facecolor='#f8f9fa')
     plt.close()
+    return None
 
 
 def make_chart():
