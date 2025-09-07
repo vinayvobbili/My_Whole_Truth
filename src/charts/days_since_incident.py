@@ -147,15 +147,16 @@ class CounterImageModifier:
 
 def get_last_incident_details():
     """Get the current days since the last incident"""
-    query = f'type:{config.team_name} impact:Confirmed'
+    query = f'type:{config.team_name} impact:"Malicious True Positive"'
     period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1}
 
     ticket = TicketHandler().get_tickets(query=query, period=period, size=1)
     if ticket:  # Check if any tickets were returned
         latest_incident_create_date_str = ticket[0].get('created')
         latest_incident_create_date = datetime.fromisoformat(latest_incident_create_date_str.replace('Z', '+00:00'))
-        today_utc = datetime.now(timezone.utc)  # Ensure both dates are timezone-aware
-        return (today_utc - latest_incident_create_date).days, latest_incident_create_date.strftime('%-m/%-d/%Y'), ticket[0].get('id')
+        latest_incident_create_date_eastern = latest_incident_create_date.astimezone(eastern)
+        today_eastern = datetime.now(eastern)
+        return (today_eastern.date() - latest_incident_create_date_eastern.date()).days, latest_incident_create_date_eastern.strftime('%-m/%-d/%Y'), ticket[0].get('id')
     else:
         return -1, None, None  # Always return a tuple
 
@@ -168,11 +169,11 @@ def make_chart():
         days_since_last_incident, last_incident_date, last_incident_id = get_last_incident_details()
 
         today_date = datetime.now().strftime('%m-%d-%Y')
-        OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Days Since Last Incident.png"
+        output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Days Since Last Incident.png"
         modifier.update_counter(
             BASE_IMAGE_PATH,
             days_since_last_incident, last_incident_date, last_incident_id,
-            output_path=OUTPUT_PATH,
+            output_path=output_path,
             font_size=50,
             font_color="green",
             background_color="#C3D3B8"  # Using hex code for lightgray
