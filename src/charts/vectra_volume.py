@@ -121,9 +121,9 @@ def generate_chart(tickets):
     ax.xaxis.set_major_locator(plt.matplotlib.dates.DayLocator(interval=2))  # Show every 2 days
     plt.xticks(rotation=90)
     
-    # Adjust layout FIRST to make room for legend
+    # Adjust layout FIRST to make room for legend - expand chart area
     plt.tight_layout()
-    plt.subplots_adjust(top=0.88, bottom=0.12, left=0.08, right=0.78)
+    plt.subplots_adjust(top=0.88, bottom=0.12, left=0.08, right=0.85)
 
     # Add MetLife branding elements
     from matplotlib.patches import FancyBboxPatch
