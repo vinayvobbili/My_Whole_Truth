@@ -41,8 +41,44 @@ class ColorSchemes:
         "Critical": "#DC2626", "High": "#EA580C", "Medium": "#CA8A04",
         "Low": "#16A34A", "Informational": "#3B82F6", "Info": "#3B82F6",
         "Unknown": "#6B7280", "4": "#DC2626", "3": "#EA580C",
-        "2": "#CA8A04", "1": "#16A34A", "0": "#3B82F6", "": "#6B7280"
+        "2": "#CA8A04", "1": "#16A34A", "0": "#3B82F6", "": "#6B7280",
+        # Add float mappings for numeric severity levels
+        "4.0": "#DC2626", "3.0": "#EA580C", "2.0": "#CA8A04", 
+        "1.0": "#16A34A", "0.0": "#3B82F6", "0.5": "#06B6D4"  # 0.5 gets teal color
     }
+    
+    @staticmethod
+    def get_severity_color(severity) -> str:
+        """Get color for severity with proper type handling."""
+        # Handle various severity formats
+        if severity is None or severity == '':
+            return ColorSchemes.SEVERITY_COLORS.get('Unknown', '#6B7280')
+        
+        # Convert to string and try direct lookup
+        sev_str = str(severity).strip()
+        if sev_str in ColorSchemes.SEVERITY_COLORS:
+            return ColorSchemes.SEVERITY_COLORS[sev_str]
+        
+        # Try as float if it's numeric
+        try:
+            sev_float = float(severity)
+            # Map float values to standard severity levels
+            if sev_float >= 4.0:
+                return ColorSchemes.SEVERITY_COLORS["Critical"]
+            elif sev_float >= 3.0:
+                return ColorSchemes.SEVERITY_COLORS["High"] 
+            elif sev_float >= 2.0:
+                return ColorSchemes.SEVERITY_COLORS["Medium"]
+            elif sev_float >= 1.0:
+                return ColorSchemes.SEVERITY_COLORS["Low"]
+            elif sev_float >= 0.5:
+                return "#06B6D4"  # Teal for 0.5
+            else:
+                return ColorSchemes.SEVERITY_COLORS["Informational"]
+        except (ValueError, TypeError):
+            pass
+        
+        return ColorSchemes.SEVERITY_COLORS.get('Unknown', '#6B7280')
 
     IMPACT_COLORS = {
         "Significant": "#ff0000", "Confirmed": "#ffa500",
@@ -182,8 +218,7 @@ class StackedBarChart:
         self.styler.apply_base_styling(fig, ax)
 
         df_pivot = df.pivot_table(index='ticket_type', columns='severity', values='count', fill_value=0)
-        colors = [ColorSchemes.SEVERITY_COLORS.get(str(sev), "#6B7280")
-                  for sev in df_pivot.columns]
+        colors = [ColorSchemes.get_severity_color(sev) for sev in df_pivot.columns]
 
         df_pivot.plot(kind='bar', stacked=True, ax=ax, color=colors,
                       width=0.6, edgecolor="white", linewidth=1.5, alpha=0.95)
