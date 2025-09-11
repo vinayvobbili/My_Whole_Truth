@@ -2,7 +2,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrow
@@ -164,9 +163,9 @@ def add_reason_text(fig, threatcon_details):
                  fontsize=10,
                  color=font_color,
                  bbox=dict(facecolor='#F5F5F5',  # Much lighter gray background
-                          edgecolor='black',
-                          boxstyle='round,pad=0.5',
-                          linewidth=1))
+                           edgecolor='black',
+                           boxstyle='round,pad=0.5',
+                           linewidth=1))
 
 
 def create_definitions_table(plt):
@@ -193,7 +192,7 @@ def create_definitions_table(plt):
         cellText=threat_details[1:],
         colLabels=threat_details[0],
         loc='bottom',
-        bbox=[0.05, -0.5, 0.9, 0.3],
+        bbox=[0.05, -0.35, 0.9, 0.3],
         colWidths=[0.15, 0.85]
     )
 
@@ -231,8 +230,8 @@ def add_fancy_title(ax):
     current_date = datetime.today().strftime("%m/%d/%Y")
     title_text = f'Threatcon Level - {current_date}'
 
-    # Main title with enhanced styling
-    ax.text(0, 1.35, title_text,
+    # Main title with enhanced styling - moved down from top edge
+    ax.text(0, 1.25, title_text,
             ha='center', va='center',
             fontsize=18, fontweight='bold',
             color='#1F2937',
@@ -246,7 +245,7 @@ def add_fancy_title(ax):
             zorder=10)
 
     # Add GS-DnR watermark in top right
-    ax.text(1.1, 1.35, 'GS-DnR',
+    ax.text(1.1, 1.25, 'GS-DnR',
             ha='right', va='center',
             fontsize=10, style='italic', fontweight='bold',
             color='#6B7280', alpha=0.8,
@@ -308,15 +307,23 @@ def make_chart():
         # Generate the gauge chart
         fig = gauge(threatcon_details)
 
-        # Add a thin black border around the figure
-        fig.patch.set_edgecolor('black')
-        fig.patch.set_linewidth(5)
+        # Add rounded blue border around the figure to match Vectra styling
+        from matplotlib.patches import FancyBboxPatch
+        # Create rounded corners for the figure border
+        rounded_border = FancyBboxPatch((0, 0), 1, 1,
+                                        boxstyle="round,pad=0.02",
+                                        transform=fig.transFigure,
+                                        facecolor='none',
+                                        edgecolor='#1A237E',
+                                        linewidth=2,
+                                        zorder=1000)
+        fig.patches.append(rounded_border)
 
         # Save the figure
         today_date = datetime.now().strftime('%m-%d-%Y')
         OUTPUT_PATH = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Threatcon Level.png"
         OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(OUTPUT_PATH, format='png', bbox_inches='tight', pad_inches=0.2, dpi=300)
+        fig.savefig(OUTPUT_PATH, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
         plt.close()
 
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
