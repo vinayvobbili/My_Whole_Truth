@@ -85,6 +85,7 @@ QRADAR_LOGO_SIZE = 0.05  # QRadar logos
 DEFAULT_LOGO_SIZE = 0.05  # Default for others
 LOST_STOLEN_DEVICE = 0.1  # Lost/Stolen Device logos
 SPLUNK_LOGO_SIZE = 0.02  # Splunk logos
+IOC_LOGO_SIZE = 0.04  # IOC Hunt logos
 
 # Create a mapping of detection sources to logo URLs and filenames
 LOGO_URL_MAPPING = {
@@ -103,6 +104,7 @@ LOGO_URL_MAPPING = {
     "employee report": ("https://cdn.iconscout.com/icon/premium/png-256-thumb/employee-report-4849241-4030934.png", "employee_report.png"),
     "case": ("https://static.vecteezy.com/system/resources/previews/006/593/081/non_2x/security-alert-concepts-vector.jpg", "case.png"),
     "lost/stolen device": ("https://clipground.com/images/theft-protection-clipart-14.jpg", "lost_stolen_device.png"),
+    "ioc_hunt": ("https://www.pngitem.com/pimgs/b/104-1049518_detective-silhouette-png.png", "ioc_hunt.png"),
     "unknown": ("https://cdn-icons-png.flaticon.com/512/2534/2534590.png", "unknown.png")
 }
 
@@ -145,7 +147,8 @@ def create_graph(tickets):
                             .replace('Lost or Stolen Computer', 'Lost/Stolen Device').strip()
                             .replace('Splunk Alert', 'Splunk Alert').strip()
                             .replace('Employee Reported Incident', 'Employee Report').strip()
-                            .replace('UEBA Prisma Cloud', 'UEBA Prisma').strip(), axis=1)
+                            .replace('UEBA Prisma Cloud', 'UEBA Prisma').strip()
+                            .replace('IOC Hunt', 'ioc_hunt').strip(), axis=1)
 
     # Count the occurrences of each source and impact
     source_impact_counts = df.groupby(['source', 'impact']).size().reset_index(name='count')
@@ -265,6 +268,8 @@ def create_graph(tickets):
                         logo_size = LOST_STOLEN_DEVICE
                     elif "splunk" in source_lower:
                         logo_size = SPLUNK_LOGO_SIZE
+                    elif "ioc_hunt" in source_lower:
+                        logo_size = IOC_LOGO_SIZE
                     else:
                         logo_size = DEFAULT_LOGO_SIZE
 
