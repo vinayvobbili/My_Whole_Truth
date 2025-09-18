@@ -53,7 +53,7 @@ def process_tickets(tickets: List[Dict[str, Any]]) -> pd.DataFrame:
     for technique, impacts in technique_counts.items():
         total = sum(impacts.values())
         confirmed = impacts.get('Confirmed', 0)
-        testing = impacts.get('Testing', 0)
+        testing = impacts.get('Security Testing', 0)
         prevented = impacts.get('Prevented', 0)
         noise = round((total - confirmed - testing - prevented) / total * 100) if total > 0 else 0
         technique_counts[technique]['Noise'] = noise
@@ -170,7 +170,7 @@ class CrowdstrikeEfficacyChart:
             impact_totals = plot_df.sum(axis=0)
             legend_labels = []
             for impact in plot_df.columns:
-                count = int(impact_totals[impact])
+                count = int(impact_totals.loc[impact])
                 legend_labels.append(f"{impact} ({count})")
 
             legend = ax.legend(labels=legend_labels, title="Impact",
@@ -206,7 +206,7 @@ class CrowdstrikeEfficacyChart:
             )
             fig.patches.append(fancy_box)
 
-            self._add_enhanced_timestamp(fig, total_all_techniques)
+            self._add_enhanced_timestamp(fig)
             self._add_bar_labels(ax, plot_df)
             self._add_noise_labels(ax, plot_df, noise_series)
 
@@ -249,7 +249,7 @@ class CrowdstrikeEfficacyChart:
                  ha='left', va='bottom', fontsize=10, transform=trans)
 
     @staticmethod
-    def _add_enhanced_timestamp(fig, total_count: int) -> None:  # noqa: ARG004
+    def _add_enhanced_timestamp(fig) -> None:
         """Add an enhanced timestamp with styling and total count."""
         now_eastern = datetime.now(EASTERN_TZ).strftime(TIMESTAMP_FORMAT)
         trans = transforms.blended_transform_factory(fig.transFigure, fig.transFigure)
@@ -287,7 +287,7 @@ class CrowdstrikeEfficacyChart:
     def _add_noise_labels(ax, df: pd.DataFrame, noise_series: pd.Series) -> None:
         """Add noise percentage labels."""
         for i, noise in enumerate(noise_series):
-            total_width = df.iloc[i].sum()
+            total_width = float(df.iloc[i].sum())
             ax.text(total_width, i, f'  {int(noise)}% noise', va='center', ha='left', fontsize=10)
 
     def generate_chart_for_period(self, period: Dict[str, Any], title: str, time_period_label: str, output_filename: str) -> None:
