@@ -88,9 +88,9 @@ class QRadarEfficacyChart:
         # Log unabbreviated rule names
         unabbreviated_rules = self._find_unabbreviated_rules(list(correlation_rule_counts.keys()))
         if unabbreviated_rules:
-            log.info("Unabbreviated Rule Names:")
+            log.warning("Unabbreviated Rule Names:")
             for rule in unabbreviated_rules:
-                log.info(rule)
+                log.warning(rule)
 
         # Create and process DataFrame
         df = pd.DataFrame.from_dict(correlation_rule_counts, orient='index').fillna(0)
