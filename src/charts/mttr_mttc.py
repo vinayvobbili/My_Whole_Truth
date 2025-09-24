@@ -126,7 +126,7 @@ def save_mttr_mttc_chart(ticket_slas_by_periods):
     }
 
     # Enhanced figure with better proportions and styling
-    fig, ax1 = plt.subplots(figsize=(12, 8), facecolor='#f8f9fa')
+    fig, ax1 = plt.subplots(figsize=(14, 10), facecolor='#f8f9fa')
     fig.patch.set_facecolor('#f8f9fa')
 
     # Create second y-axis for containment
@@ -304,14 +304,7 @@ def save_mttr_mttc_chart(ticket_slas_by_periods):
                          bbox=dict(boxstyle="circle,pad=0.2", facecolor='black', alpha=0.8, edgecolor='white', linewidth=1))
 
     # Add GS-DnR watermark
-    fig.text(0.99, 0.01, 'GS-DnR',
-             ha='right', va='bottom', fontsize=10,
-             alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
-
-    # Add explanatory note below legend
-    plt.text(1.18, 0.78, 'Ticket counts for that period (*)',
-             transform=ax1.transAxes, ha='left', va='top',
-             fontsize=9, color='#666666', style='italic')
+    fig.text(0.99, 0.01, 'GS-DnR', ha='right', va='bottom', fontsize=10, alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
 
     # Enhanced layout with space for external legend
     plt.tight_layout()
