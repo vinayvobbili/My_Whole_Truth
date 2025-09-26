@@ -87,7 +87,7 @@ LOST_STOLEN_DEVICE = 0.1  # Lost/Stolen Device logos
 SPLUNK_LOGO_SIZE = 0.02  # Splunk logos
 IOC_HUNT_LOGO_SIZE = 0.03  # IOC Hunt logos
 AREA1_LOGO_SIZE = 0.06  # Area1 logos
-LEAKED_CREDS_LOGO_SIZE = 0.08  # Leaked Credentials logos
+LEAKED_CREDS_LOGO_SIZE = 0.04  # Leaked Credentials logos
 
 # Create a mapping of detection sources to logo URLs and filenames
 LOGO_URL_MAPPING = {
