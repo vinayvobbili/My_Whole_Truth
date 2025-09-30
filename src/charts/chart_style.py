@@ -6,21 +6,23 @@ import matplotlib
 
 _APPLIED = False
 
-def apply_chart_style():
+def apply_chart_style(force: bool = False):
+    """Apply central Matplotlib style.
+
+    Parameters:
+        force: if True re-apply even if previously applied (useful after modifying this module).
+    """
     global _APPLIED
-    if _APPLIED:
+    if _APPLIED and not force:
         return
     matplotlib.rcParams.update({
-        # Use only fonts that ship with matplotlib or are broadly available
+        # Keep it to fonts that are bundled with matplotlib to avoid findfont warnings.
         "font.family": "DejaVu Sans",
         "font.sans-serif": [
             "DejaVu Sans",
-            "Liberation Sans",
-            "Nimbus Sans",
             "sans-serif"
         ],
         # Ensure minus signs render correctly
         "axes.unicode_minus": False,
     })
     _APPLIED = True
-

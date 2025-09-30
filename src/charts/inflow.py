@@ -30,8 +30,8 @@ class ChartConfig:
 
     def __post_init__(self):
         if self.font_family is None:
-            # Use only broadly available fonts; remove Arial variants to avoid warnings on Linux
-            self.font_family = ['DejaVu Sans', 'Liberation Sans', 'Nimbus Sans', 'sans-serif']
+            # Use only bundled / always-available fonts to avoid warnings
+            self.font_family = ['DejaVu Sans', 'sans-serif']
 
 
 @dataclass

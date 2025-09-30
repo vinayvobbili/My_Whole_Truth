@@ -11,7 +11,7 @@ import pandas as pd
 import pytz
 from matplotlib import transforms
 from webexpythonsdk import WebexAPI
-from .chart_style import apply_chart_style
+from src.charts.chart_style import apply_chart_style
 apply_chart_style()
 
 from data.data_maps import impact_colors

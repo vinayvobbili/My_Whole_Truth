@@ -7,7 +7,7 @@ import matplotlib.transforms as transforms
 import numpy as np
 from matplotlib import pyplot as plt
 from pytz import timezone
-from .chart_style import apply_chart_style
+from src.charts.chart_style import apply_chart_style
 apply_chart_style()
 
 # Add the project root to Python path

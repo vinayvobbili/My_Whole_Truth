@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 import pytz
 from matplotlib.patches import FancyBboxPatch
-# Add centralized style
-from .chart_style import apply_chart_style
+# Replace relative style import with absolute
+from src.charts.chart_style import apply_chart_style
 apply_chart_style()
 
 # Add the project root to Python path
