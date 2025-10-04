@@ -2,7 +2,7 @@ import json
 import ssl
 import sys
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import cartopy.crs as ccrs
@@ -24,9 +24,6 @@ from services.xsoar import TicketHandler
 config = config_module.get_config()
 
 eastern = timezone('US/Eastern')
-
-QUERY_TEMPLATE = f'status:closed type:{config.team_name} -owner:""'
-PERIOD = {"byFrom": "days", "fromValue": 30}
 
 ROOT_DIRECTORY = Path(__file__).parent.parent.parent
 DATA_DIR = ROOT_DIRECTORY / 'data' / 'metrics'
@@ -56,8 +53,18 @@ def create_choropleth_map():
     with open(DATA_DIR / 'x_cartopy_country_name_mapping.json', 'r') as f:
         x_cartopy_country_name_mapping = json.load(f)
 
-    query = QUERY_TEMPLATE
-    tickets = TicketHandler().get_tickets(query=query, period=PERIOD)
+    # Calculate exact 30-day window using explicit timestamps
+    import pytz
+    end_date = datetime.now(eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+    start_date = end_date - timedelta(days=30)
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Convert to UTC for API query
+    start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    query = f'status:closed type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
+    tickets = TicketHandler().get_tickets(query=query)
     ticket_counts_by_country = {}
 
     for ticket in tickets:

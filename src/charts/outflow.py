@@ -388,11 +388,12 @@ def create_graph(tickets):
 
 
 def make_chart() -> None:
-    # Calculate fresh values EACH TIME the command is run
+    # Calculate exact yesterday window in Eastern time, then convert to UTC for query
     yesterday_start = datetime.now(eastern).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
     yesterday_end = yesterday_start + timedelta(days=1)
-    yesterday_start_utc = yesterday_start.astimezone(eastern).strftime('%Y-%m-%dT%H:%M:%SZ')
-    yesterday_end_utc = yesterday_end.astimezone(eastern).strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Convert Eastern time to UTC for the API query
+    yesterday_start_utc = yesterday_start.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    yesterday_end_utc = yesterday_end.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.team_name, start=yesterday_start_utc, end=yesterday_end_utc)
     tickets = TicketHandler().get_tickets(query=query)

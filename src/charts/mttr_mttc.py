@@ -320,16 +320,20 @@ def save_mttr_mttc_chart(ticket_slas_by_periods):
 
 
 def make_chart():
-    query = f' type:{config.team_name} -owner:""'
-    period = {
-        "byTo": "months",
-        "toValue": None,
-        "byFrom": "months",
-        "fromValue": 1
-    }
+    # Calculate exact 30-day window using explicit timestamps
+    end_date = datetime.now(eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+    start_date = end_date - timedelta(days=30)
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Convert to UTC for API query
+    import pytz
+    start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    query = f'type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
 
     incident_fetcher = TicketHandler()
-    tickets = incident_fetcher.get_tickets(query=query, period=period)
+    tickets = incident_fetcher.get_tickets(query=query)
     tickets_by_periods = get_tickets_by_periods(tickets)
     save_mttr_mttc_chart(tickets_by_periods)
 

@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -26,13 +26,6 @@ with open(DETECTION_SOURCE_NAMES_ABBREVIATION_FILE, 'r') as f:
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-QUERY = f'type:{config.team_name} -owner:"" status:closed'
-PERIOD = {
-    "byFrom": "months",
-    "fromValue": 1
-}
-
 
 def get_lifespan_chart(tickets):
     if not tickets:
@@ -181,8 +174,19 @@ def get_lifespan_chart(tickets):
 
 
 def make_chart():
+    # Calculate exact 30-day window using explicit timestamps
+    end_date = datetime.now(eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+    start_date = end_date - timedelta(days=30)
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Convert to UTC for API query
+    start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    query = f'type:{config.team_name} -owner:"" status:closed created:>={start_str} created:<={end_str}'
+
     incident_fetcher = TicketHandler()
-    tickets = incident_fetcher.get_tickets(query=QUERY, period=PERIOD)
+    tickets = incident_fetcher.get_tickets(query=query)
     get_lifespan_chart(tickets)
 
 

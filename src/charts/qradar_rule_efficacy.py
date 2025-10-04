@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -46,10 +46,19 @@ class QRadarEfficacyChart:
         """Initialize with ticket type prefix."""
         self.incident_fetcher = TicketHandler()
 
-    def get_tickets(self, period: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Fetch tickets for the specified period."""
-        query = f'type:"{CONFIG.team_name} Qradar Alert" -owner:""'
-        tickets = self.incident_fetcher.get_tickets(query=query, period=period)
+    def get_tickets(self, days: int) -> List[Dict[str, Any]]:
+        """Fetch tickets for the specified number of days using explicit timestamps."""
+        # Calculate exact time window
+        end_date = datetime.now(EASTERN_TZ).replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date = end_date - timedelta(days=days)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Convert to UTC for API query
+        start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'type:"{CONFIG.team_name} Qradar Alert" -owner:"" created:>={start_str} created:<={end_str}'
+        tickets = self.incident_fetcher.get_tickets(query=query)
 
         if not tickets:
             log.warning("No tickets found matching the query.")
@@ -301,10 +310,10 @@ class QRadarEfficacyChart:
             # Make sure i is an integer index
             ax.text(total_width, i, f'  {int(noise)}% noise', va='center', ha='left', fontsize=10)
 
-    def generate_chart_for_period(self, period: Dict[str, Any], title: str, time_period_label: str, output_filename: str) -> None:
+    def generate_chart_for_period(self, days: int, title: str, time_period_label: str, output_filename: str) -> None:
         """Generate a chart for the specified time period."""
         try:
-            tickets = self.get_tickets(period)
+            tickets = self.get_tickets(days)
             if not tickets:
                 return
 
@@ -318,19 +327,19 @@ class QRadarEfficacyChart:
         # Define chart configurations
         chart_configs = [
             {
-                "period": {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 3},
+                "days": 90,
                 "title": "QR Rule Efficacy (Top 20 rules by Offense Volume, past Quarter)",
                 "time_period_label": "last 3 months",
                 "output_filename": "QR Rule Efficacy-Quarter.png"
             },
             {
-                "period": {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1},
+                "days": 30,
                 "title": "QR Rule Efficacy (Top 20 rules by Offense Volume, past Month)",
                 "time_period_label": "last 1 month",
                 "output_filename": "QR Rule Efficacy-Month.png"
             },
             {
-                "period": {"byTo": "days", "toValue": None, "byFrom": "days", "fromValue": 7},
+                "days": 7,
                 "title": "QR Rule Efficacy (Top 20 rules by Offense Volume, past Week)",
                 "time_period_label": "last 7 days",
                 "output_filename": "QR Rule Efficacy-Week.png"

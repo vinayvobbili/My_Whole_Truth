@@ -28,6 +28,9 @@ config = config.get_config()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Define timezone for timestamp calculations
+eastern = pytz.timezone('US/Eastern')
+
 webex_headers = {
     'Content-Type': 'application/json',
     'Authorization': f"Bearer {config.webex_bot_access_token_moneyball}"
@@ -354,9 +357,14 @@ def send_report(room_id):
     try:
         webex_api = WebexAPI(access_token=config.webex_bot_access_token_soar)
 
-        query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
-        period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
-        tickets = TicketHandler().get_tickets(query=query, period=period)
+        # Calculate 30 days ago for regular tickets
+        from datetime import timedelta
+        now = datetime.now(eastern)
+        thirty_days_ago = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+        thirty_days_ago_utc = thirty_days_ago.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise" created:<{thirty_days_ago_utc}'
+        tickets = TicketHandler().get_tickets(query=query)
 
         webex_api.messages.create(
             roomId=room_id,
@@ -364,9 +372,12 @@ def send_report(room_id):
             markdown=f'Summary (Type={config.team_name}* - TP, Created=1+ months ago)\n ``` \n {generate_daily_summary(tickets)}'
         )
 
-        query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
-        period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
-        tickets = TicketHandler().get_tickets(query=query, period=period)
+        # Calculate 90 days ago for Third Party Compromise
+        ninety_days_ago = (now - timedelta(days=90)).replace(hour=0, minute=0, second=0, microsecond=0)
+        ninety_days_ago_utc = ninety_days_ago.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'-status:closed type:"{config.team_name} Third Party Compromise" created:<{ninety_days_ago_utc}'
+        tickets = TicketHandler().get_tickets(query=query)
 
         if tickets:
             webex_api.messages.create(
@@ -380,16 +391,22 @@ def send_report(room_id):
 
 def make_chart():
     try:
-        # METCIRT* tickets minus the Third Party are considered aging after 30 days
-        query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise"'
-        period = {"byTo": "months", "toValue": 1, "byFrom": "months", "fromValue": None}
+        from datetime import timedelta
+        now = datetime.now(eastern)
 
-        tickets = TicketHandler().get_tickets(query=query, period=period)
+        # METCIRT* tickets minus the Third Party are considered aging after 30 days
+        thirty_days_ago = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+        thirty_days_ago_utc = thirty_days_ago.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'-status:closed type:{config.team_name} -type:"{config.team_name} Third Party Compromise" created:<{thirty_days_ago_utc}'
+        tickets = TicketHandler().get_tickets(query=query)
 
         # Third Party Compromise tickets are considered aging after 90 days
-        query = f'-status:closed type:"{config.team_name} Third Party Compromise"'
-        period = {"byTo": "months", "toValue": 3, "byFrom": "months", "fromValue": None}
-        tickets = tickets + TicketHandler().get_tickets(query=query, period=period)
+        ninety_days_ago = (now - timedelta(days=90)).replace(hour=0, minute=0, second=0, microsecond=0)
+        ninety_days_ago_utc = ninety_days_ago.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'-status:closed type:"{config.team_name} Third Party Compromise" created:<{ninety_days_ago_utc}'
+        tickets = tickets + TicketHandler().get_tickets(query=query)
 
         generate_plot(tickets)
     except Exception as e:

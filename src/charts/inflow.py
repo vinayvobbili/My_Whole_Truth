@@ -429,18 +429,44 @@ class TicketChartGenerator:
         return time.time() - start_time
 
     def generate_60_day_chart(self) -> float:
-        """Generate past 60 days chart."""
-        period = {"by": "day", "fromValue": 60}
-        return self._generate_period_chart(
-            period, "Inflow Over the Past 60 Days", "Inflow Past 60 Days.png"
-        )
-
-    def generate_12_month_chart(self) -> float:
-        """Generate past 12 months impact chart."""
+        """Generate past 60 days chart using explicit timestamps."""
         start_time = time.time()
 
-        query = f'type:{self.config.team_name} -owner:""'
-        tickets = self._fetch_12_month_tickets(query)
+        # Calculate exact 60-day window
+        end_date = datetime.now(self.eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date = end_date - timedelta(days=60)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'type:{self.config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
+        tickets = self.ticket_handler.get_tickets(query=query)
+
+        if not tickets:
+            print("No tickets found for Past 60 Days.")
+            return time.time() - start_time
+
+        date_impact_counts, unique_dates = DataProcessor.process_tickets_for_period(tickets)
+        fig = self.period_chart.create_period_chart(date_impact_counts, unique_dates, tickets, "Inflow Over the Past 60 Days")
+
+        self._finalize_and_save_chart(fig, "Inflow Past 60 Days.png")
+        return time.time() - start_time
+
+    def generate_12_month_chart(self) -> float:
+        """Generate past 12 months impact chart using explicit timestamps."""
+        start_time = time.time()
+
+        # Calculate exact 12-month window
+        end_date = datetime.now(self.eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date = end_date - timedelta(days=365)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        query = f'type:{self.config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
+        tickets = self.ticket_handler.get_tickets(query=query, size=20000)
 
         if not tickets:
             print("No tickets found for Past 12 Months.")
@@ -475,38 +501,6 @@ class TicketChartGenerator:
 
         return (yesterday_start.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
                 yesterday_end.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
-
-    def _generate_period_chart(self, period_config: Dict[str, Any], title: str, filename: str) -> float:
-        """Generate a period-based chart."""
-        start_time = time.time()
-
-        query = f'type:{self.config.team_name} -owner:""'
-        tickets = self.ticket_handler.get_tickets(query=query, period=period_config)
-
-        if not tickets:
-            print(f"No tickets found for {title}.")
-            return time.time() - start_time
-
-        date_impact_counts, unique_dates = DataProcessor.process_tickets_for_period(tickets)
-        fig = self.period_chart.create_period_chart(date_impact_counts, unique_dates, tickets, title)
-
-        self._finalize_and_save_chart(fig, filename)
-        return time.time() - start_time
-
-    def _fetch_12_month_tickets(self, query: str) -> List[Dict[str, Any]]:
-        """Fetch tickets for the past 12 months in chunks."""
-        tickets = []
-
-        for i in range(0, 13, 3):
-            period = {
-                "byFrom": "months", "fromValue": 12 - i,
-                "byTo": "months", "toValue": max(0, 9 - i)
-            }
-            quarter_tickets = self.ticket_handler.get_tickets(query=query, period=period, size=10000)
-            tickets.extend(quarter_tickets)
-
-        # Deduplicate
-        return list({t['id']: t for t in tickets}.values())
 
     def _get_expected_months(self) -> List[Any]:
         """Get list of expected months for the past 12 months."""

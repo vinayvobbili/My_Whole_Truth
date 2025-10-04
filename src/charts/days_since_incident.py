@@ -1,6 +1,6 @@
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import pytesseract
@@ -147,10 +147,19 @@ class CounterImageModifier:
 
 def get_last_incident_details():
     """Get the current days since the last incident"""
-    query = f'type:{config.team_name} impact:"Malicious True Positive"'
-    period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": 1}
+    # Search for the most recent MTP incident in the past year using exact timestamps
+    # Note: Using 365 days to ensure we catch incidents even if they're older
+    end_date = datetime.now(eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+    start_date = end_date - timedelta(days=365)
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    ticket = TicketHandler().get_tickets(query=query, period=period, size=1)
+    # Convert to UTC for API query
+    start_str = start_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    query = f'type:{config.team_name} impact:"Malicious True Positive" created:>={start_str} created:<={end_str}'
+    ticket = TicketHandler().get_tickets(query=query, size=1)
+
     if ticket:  # Check if any tickets were returned
         latest_incident_create_date_str = ticket[0].get('created')
         latest_incident_create_date = datetime.fromisoformat(latest_incident_create_date_str.replace('Z', '+00:00'))
