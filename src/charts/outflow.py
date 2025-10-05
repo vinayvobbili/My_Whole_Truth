@@ -6,15 +6,16 @@ import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from matplotlib import transforms
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
 from PIL import Image
+from matplotlib import transforms
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.ticker import MaxNLocator
 
 from src.charts.chart_style import apply_chart_style
+
 apply_chart_style()
 
 # Add the project root to Python path
@@ -92,6 +93,7 @@ IOC_HUNT_LOGO_SIZE = 0.03  # IOC Hunt logos
 AREA1_LOGO_SIZE = 0.06  # Area1 logos
 LEAKED_CREDS_LOGO_SIZE = 0.04  # Leaked Credentials logos
 AKAMAI_LOGO_SIZE = 0.04
+VARONIS_LOGO_SIZE = 0.04
 
 # Create a mapping of detection sources to logo URLs and filenames
 LOGO_URL_MAPPING = {
@@ -285,6 +287,8 @@ def create_graph(tickets, period_label="Yesterday"):
                         logo_size = LEAKED_CREDS_LOGO_SIZE
                     elif "akamai" in source_lower:
                         logo_size = AKAMAI_LOGO_SIZE
+                    elif "varonis" in source_lower:
+                        logo_size = VARONIS_LOGO_SIZE
                     else:
                         logo_size = DEFAULT_LOGO_SIZE
 
