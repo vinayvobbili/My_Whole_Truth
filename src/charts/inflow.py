@@ -44,22 +44,22 @@ class ColorSchemes:
         "Unknown": "#6B7280", "4": "#DC2626", "3": "#EA580C",
         "2": "#CA8A04", "1": "#16A34A", "0": "#3B82F6", "": "#6B7280",
         # Add float mappings for numeric severity levels
-        "4.0": "#DC2626", "3.0": "#EA580C", "2.0": "#CA8A04", 
+        "4.0": "#DC2626", "3.0": "#EA580C", "2.0": "#CA8A04",
         "1.0": "#16A34A", "0.0": "#3B82F6", "0.5": "#06B6D4"  # 0.5 gets teal color
     }
-    
+
     @staticmethod
     def get_severity_color(severity) -> str:
         """Get color for severity with proper type handling."""
         # Handle various severity formats
         if severity is None or severity == '':
             return ColorSchemes.SEVERITY_COLORS.get('Unknown', '#6B7280')
-        
+
         # Convert to string and try direct lookup
         sev_str = str(severity).strip()
         if sev_str in ColorSchemes.SEVERITY_COLORS:
             return ColorSchemes.SEVERITY_COLORS[sev_str]
-        
+
         # Try as float if it's numeric
         try:
             sev_float = float(severity)
@@ -67,7 +67,7 @@ class ColorSchemes:
             if sev_float >= 4.0:
                 return ColorSchemes.SEVERITY_COLORS["Critical"]
             elif sev_float >= 3.0:
-                return ColorSchemes.SEVERITY_COLORS["High"] 
+                return ColorSchemes.SEVERITY_COLORS["High"]
             elif sev_float >= 2.0:
                 return ColorSchemes.SEVERITY_COLORS["Medium"]
             elif sev_float >= 1.0:
@@ -78,7 +78,7 @@ class ColorSchemes:
                 return ColorSchemes.SEVERITY_COLORS["Informational"]
         except (ValueError, TypeError):
             pass
-        
+
         return ColorSchemes.SEVERITY_COLORS.get('Unknown', '#6B7280')
 
     IMPACT_COLORS = {
@@ -102,13 +102,13 @@ class ColorSchemes:
     # Color palette for ticket types (soft pastel colors)
     TYPE_COLORS = {
         "Crowdstrike Detection": "#E8B4B8",  # Soft dusty rose
-        "Crowdstrike Incident": "#E8D4B8",   # Soft peach
-        "Prisma Runtime": "#D4B896",         # Warm tan
-        "Prisma Compute": "#B8D4B8",         # Soft sage green
-        "Splunk Alert": "#A8D5E2",           # Soft sky blue
-        "UEBA Prisma": "#D4B8C8",            # Soft lavender
-        "Phishing": "#E8D4E8",               # Soft orchid
-        "Unknown": "#D4C8B8"                 # Soft taupe
+        "Crowdstrike Incident": "#E8D4B8",  # Soft peach
+        "Prisma Runtime": "#D4B896",  # Warm tan
+        "Prisma Compute": "#B8D4B8",  # Soft sage green
+        "Splunk Alert": "#A8D5E2",  # Soft sky blue
+        "UEBA Prisma": "#D4B8C8",  # Soft lavender
+        "Phishing": "#E8D4E8",  # Soft orchid
+        "Unknown": "#D4C8B8"  # Soft taupe
     }
 
 
@@ -442,7 +442,7 @@ class TicketChartGenerator:
             processed_data, f"Inflow {period_label} ({len(tickets)})"
         )
 
-        self._finalize_and_save_chart(fig, f"Inflow {period_label}.png")
+        self._finalize_and_save_chart(fig, f"Inflow Yesterday.png")
         return time.time() - start_time
 
     def generate_60_day_chart(self) -> float:
@@ -672,7 +672,7 @@ class TicketChartGenerator:
         return fig
 
     def _create_monthly_type_chart(self, expected_months: List[Any], month_labels: List[str],
-                                    month_type_counts: pd.DataFrame, tickets: List[Dict[str, Any]]) -> plt.Figure:
+                                   month_type_counts: pd.DataFrame, tickets: List[Dict[str, Any]]) -> plt.Figure:
         """Create monthly ticket type distribution chart."""
         fig, ax = plt.subplots(figsize=(20, 12), facecolor='#f8f9fa')
         fig.patch.set_facecolor('#f8f9fa')
