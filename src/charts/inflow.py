@@ -394,8 +394,8 @@ class PeriodChart:
 
         # Enhanced legend with consistent order (MTP at top)
         legend = ax.legend(title='Impact',
-                           title_fontproperties={'weight': 'bold', 'size': 14},
-                           loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=11,
+                           title_fontproperties={'weight': 'bold', 'size': 12},
+                           loc='upper left', bbox_to_anchor=(0.95, 1), fontsize=10,
                            frameon=True, fancybox=True, shadow=True)
         legend.get_frame().set_facecolor('white')
         legend.get_frame().set_alpha(0.95)
