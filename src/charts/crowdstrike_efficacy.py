@@ -55,7 +55,8 @@ def process_tickets(tickets: List[Dict[str, Any]]) -> pd.DataFrame:
         confirmed = impacts.get('Confirmed', 0)
         testing = impacts.get('Security Testing', 0)
         prevented = impacts.get('Prevented', 0)
-        noise = round((total - confirmed - testing - prevented) / total * 100) if total > 0 else 0
+        malicious_true_positives = impacts.get('Malicious True Positive', 0)
+        noise = round((total - confirmed - testing - prevented - malicious_true_positives) / total * 100) if total > 0 else 0
         technique_counts[technique]['Noise'] = noise
 
     df = pd.DataFrame.from_dict(technique_counts, orient='index').fillna(0)
