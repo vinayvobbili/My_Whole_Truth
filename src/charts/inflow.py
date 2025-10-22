@@ -702,7 +702,7 @@ class TicketChartGenerator:
                      fontweight='bold', fontsize=20, color=self.chart_config.border_color, pad=20)
 
         ax.set_xticks(hours)
-        ax.set_xticklabels([f'{h:02d}:00' for h in hours], rotation=45, ha='right',
+        ax.set_xticklabels([f'{h:02d}:XX' for h in hours], rotation=45, ha='right',
                            fontsize=9, color=self.chart_config.border_color)
         ax.tick_params(axis='y', labelsize=11, colors=self.chart_config.border_color)
         ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
