@@ -1,10 +1,15 @@
+import sys
+from pathlib import Path
+
+# Add the project root to Python path FIRST
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 import json
 import re
 import ssl
-import sys
 import urllib.request
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,10 +22,6 @@ from matplotlib.ticker import MaxNLocator
 from src.charts.chart_style import apply_chart_style
 
 apply_chart_style()
-
-# Add the project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from my_config import get_config
 from services.xsoar import TicketHandler

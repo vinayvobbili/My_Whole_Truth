@@ -1,8 +1,13 @@
 import sys
+from pathlib import Path
+
+# Add the project root to Python path FIRST
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
 import matplotlib.pyplot as plt
@@ -13,10 +18,6 @@ from matplotlib import transforms
 
 from my_config import get_config
 from services.xsoar import TicketHandler
-
-# Add the project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 
 @dataclass
