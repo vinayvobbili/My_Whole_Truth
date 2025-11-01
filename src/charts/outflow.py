@@ -24,7 +24,7 @@ from src.charts.chart_style import apply_chart_style
 apply_chart_style()
 
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 eastern = pytz.timezone('US/Eastern')
 
@@ -414,7 +414,8 @@ def make_chart() -> None:
     yesterday_end_utc = yesterday_end.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = QUERY_TEMPLATE.format(ticket_type_prefix=config.team_name, start=yesterday_start_utc, end=yesterday_end_utc)
-    tickets = TicketHandler().get_tickets(query=query)
+    prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
+    tickets = prod_ticket_handler.get_tickets(query=query)
     create_graph(tickets, period_label)
 
 

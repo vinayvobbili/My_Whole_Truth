@@ -13,7 +13,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import my_config as config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 eastern = pytz.timezone('US/Eastern')
 
@@ -209,8 +209,8 @@ def make_chart(months_back=3):
         query = f'(type:"{CONFIG.team_name} CrowdStrike Falcon Detection" or type:"{CONFIG.team_name} CrowdStrike Falcon Incident") -owner:""'
         period = {"byTo": "months", "toValue": None, "byFrom": "months", "fromValue": months_back}
 
-        incident_fetcher = TicketHandler()
-        tickets = incident_fetcher.get_tickets(query, period)
+        prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
+        tickets = prod_incident_fetcher.get_tickets(query, period)
 
         generate_chart(tickets)
 

@@ -17,7 +17,7 @@ import pytz
 from matplotlib import transforms
 
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 
 @dataclass
@@ -430,7 +430,7 @@ class TicketChartGenerator:
         self.styler = ChartStyler(self.chart_config)
         self.stacked_chart = StackedBarChart(self.styler)
         self.period_chart = PeriodChart(self.styler)
-        self.ticket_handler = TicketHandler()
+        self.prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
         self.eastern = pytz.timezone('US/Eastern')
 
         # Setup output directory
@@ -456,7 +456,7 @@ class TicketChartGenerator:
         # Filter tickets by created date
         tickets = [
             t for t in tickets_12_month
-            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_localize(None).replace(tzinfo=pytz.utc) < end_dt
+            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC') < end_dt
         ]
 
         if not tickets:
@@ -498,7 +498,7 @@ class TicketChartGenerator:
         # Filter tickets by created date
         tickets = [
             t for t in tickets_12_month
-            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_localize(None).replace(tzinfo=pytz.utc) <= end_dt
+            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC') <= end_dt
         ]
 
         if not tickets:
@@ -975,7 +975,7 @@ def make_chart() -> None:
 
     query = f'type:{generator.config.team_name} -owner:"" created:>{start_str}'
     print(f"Fetching 12-month tickets with pagination...")
-    tickets = generator.ticket_handler.get_tickets(query=query, paginate=True)
+    tickets = generator.prod_ticket_handler.get_tickets(query=query, paginate=True)
 
     if not tickets:
         print("No tickets found for Past 12 Months.")

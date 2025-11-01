@@ -15,7 +15,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 config = get_config()
 eastern = timezone('US/Eastern')  # Define the Eastern time zone
@@ -57,10 +57,15 @@ def get_tickets_by_periods(tickets):
     for ticket in tickets:
         custom_fields = ticket['CustomFields']
 
-        incident_date = datetime.strptime(
-            ticket['created'],
-            '%Y-%m-%dT%H:%M:%S.%fZ' if '.' in ticket['created'] else '%Y-%m-%dT%H:%M:%SZ'
-        ).date()
+        # Handle both datetime objects and string formats
+        created = ticket['created']
+        if isinstance(created, datetime):
+            incident_date = created.date()
+        else:
+            incident_date = datetime.strptime(
+                created,
+                '%Y-%m-%dT%H:%M:%S.%fZ' if '.' in created else '%Y-%m-%dT%H:%M:%SZ'
+            ).date()
 
         response_duration = custom_fields.get('timetorespond', {}).get('totalDuration', custom_fields.get('responsesla', {}).get('totalDuration', 0))
 
@@ -81,10 +86,15 @@ def get_tickets_by_periods(tickets):
     for ticket in host_tickets:
         custom_fields = ticket['CustomFields']
 
-        incident_date = datetime.strptime(
-            ticket['created'],
-            '%Y-%m-%dT%H:%M:%S.%fZ' if '.' in ticket['created'] else '%Y-%m-%dT%H:%M:%SZ'
-        ).date()
+        # Handle both datetime objects and string formats
+        created = ticket['created']
+        if isinstance(created, datetime):
+            incident_date = created.date()
+        else:
+            incident_date = datetime.strptime(
+                created,
+                '%Y-%m-%dT%H:%M:%S.%fZ' if '.' in created else '%Y-%m-%dT%H:%M:%SZ'
+            ).date()
 
         containment_duration = custom_fields.get('timetocontain', {}).get('totalDuration', custom_fields.get('containmentsla', {}).get('totalDuration', 0))
 
@@ -342,8 +352,8 @@ def make_chart():
 
     query = f'type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
 
-    incident_fetcher = TicketHandler()
-    tickets = incident_fetcher.get_tickets(query=query)
+    prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
+    tickets = prod_incident_fetcher.get_tickets(query=query)
     tickets_by_periods = get_tickets_by_periods(tickets)
     save_mttr_mttc_chart(tickets_by_periods, period_label)
 

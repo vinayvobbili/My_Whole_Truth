@@ -11,7 +11,7 @@ import pytz
 from matplotlib import transforms
 
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 eastern = pytz.timezone('US/Eastern')  # Define the Eastern time zone
 
@@ -185,8 +185,8 @@ def make_chart():
 
     query = f'type:{config.team_name} -owner:"" status:closed created:>={start_str} created:<={end_str}'
 
-    incident_fetcher = TicketHandler()
-    tickets = incident_fetcher.get_tickets(query=query)
+    prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
+    tickets = prod_incident_fetcher.get_tickets(query=query)
     get_lifespan_chart(tickets)
 
 

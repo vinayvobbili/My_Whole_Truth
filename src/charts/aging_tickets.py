@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytz
@@ -118,7 +118,7 @@ def create_empty_plot() -> plt.Figure:
             transform=ax.transAxes, fontsize=24, fontweight='bold',
             color='#2E8B57',
             bbox=dict(boxstyle="round,pad=0.5", facecolor='white',
-                     alpha=0.8, edgecolor='#2E8B57', linewidth=2))
+                      alpha=0.8, edgecolor='#2E8B57', linewidth=2))
     ax.axis('off')
     return fig
 
@@ -192,7 +192,7 @@ def add_value_labels(ax: plt.Axes) -> None:
                     ha='center', va='center',
                     fontsize=13, color='white', fontweight='bold',
                     bbox=dict(boxstyle="circle,pad=0.2", facecolor='black',
-                             alpha=0.8, edgecolor='white', linewidth=1)
+                              alpha=0.8, edgecolor='white', linewidth=1)
                 )
 
 
@@ -285,7 +285,7 @@ def add_timestamp(fig: plt.Figure) -> None:
         transform=fig.transFigure, ha='left', va='bottom',
         fontsize=10, color='#1A237E', fontweight='bold',
         bbox=dict(boxstyle="round,pad=0.4", facecolor='white',
-                 alpha=0.9, edgecolor='#1A237E', linewidth=1.5)
+                  alpha=0.9, edgecolor='#1A237E', linewidth=1.5)
     )
 
 
@@ -373,7 +373,7 @@ def generate_plot(tickets: List[Dict[Any, Any]]) -> None:
 
 
 def generate_daily_summary(tickets: List[Dict[Any, Any]]) -> Optional[str]:
-    """Generate markdown table summary of aging tickets by owner.
+    """Generate Markdown table summary of aging tickets by owner.
 
     Args:
         tickets: List of ticket dictionaries
@@ -423,14 +423,15 @@ def get_aging_tickets(days_ago: int, ticket_type: str) -> List[Dict[Any, Any]]:
     Returns:
         List of ticket dictionaries
     """
-    from services.xsoar import TicketHandler
+    from services.xsoar import TicketHandler, XsoarEnvironment
 
     now = datetime.now(EASTERN)
     threshold_date = (now - timedelta(days=days_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
     threshold_utc = threshold_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = f'-status:closed type:{ticket_type} created:<{threshold_utc}'
-    return TicketHandler().get_tickets(query=query)
+    prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
+    return prod_ticket_handler.get_tickets(query=query)
 
 
 def send_report(room_id: str) -> None:
@@ -492,7 +493,7 @@ def make_chart() -> None:
 
 def main() -> None:
     """Main entry point for testing."""
-    room_id = config.webex_room_id_vinay_test_space
+    # room_id = config.webex_room_id_vinay_test_space
     # send_report(room_id)
     make_chart()
 

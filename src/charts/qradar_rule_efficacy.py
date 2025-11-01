@@ -18,7 +18,7 @@ apply_chart_style()
 
 from data.data_maps import impact_colors
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -46,7 +46,7 @@ class QRadarEfficacyChart:
 
     def __init__(self):
         """Initialize with ticket type prefix."""
-        self.incident_fetcher = TicketHandler()
+        self.prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
 
     def get_tickets(self, days: int) -> List[Dict[str, Any]]:
         """Fetch tickets for the specified number of days using explicit timestamps."""
@@ -60,7 +60,7 @@ class QRadarEfficacyChart:
         end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         query = f'type:"{CONFIG.team_name} Qradar Alert" -owner:"" created:>={start_str} created:<={end_str}'
-        tickets = self.incident_fetcher.get_tickets(query=query)
+        tickets = self.prod_incident_fetcher.get_tickets(query=query)
 
         if not tickets:
             log.warning("No tickets found matching the query.")

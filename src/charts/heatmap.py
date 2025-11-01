@@ -19,7 +19,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import my_config as config_module
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 config = config_module.get_config()
 
@@ -64,7 +64,8 @@ def create_choropleth_map():
     end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = f'status:closed type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
-    tickets = TicketHandler().get_tickets(query=query)
+    tickets = prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
+    return prod_prod_ticket_handler.get_tickets(query=query)
     ticket_counts_by_country = {}
 
     for ticket in tickets:

@@ -17,7 +17,7 @@ sys.path.insert(0, str(project_root))
 
 import my_config as config
 from data.data_maps import impact_colors
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -86,7 +86,7 @@ class CrowdstrikeEfficacyChart:
     """Class to generate efficacy charts for different time periods."""
 
     def __init__(self):
-        self.incident_fetcher = TicketHandler()
+        self.prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
 
     def get_tickets(self, days: int) -> List[Dict[str, Any]]:
         """Fetch tickets for the specified number of days using explicit timestamps."""
@@ -101,7 +101,7 @@ class CrowdstrikeEfficacyChart:
 
         query = f'(type:"{CONFIG.team_name} CrowdStrike Falcon Detection" or type:"{CONFIG.team_name} CrowdStrike Falcon Incident") -owner:"" created:>={start_str} created:<={end_str}'
         try:
-            tickets = self.incident_fetcher.get_tickets(query=query)
+            tickets = self.prod_incident_fetcher.get_tickets(query=query)
             if not tickets:
                 log.warning("No tickets found matching the query.")
             return tickets
@@ -296,7 +296,7 @@ class CrowdstrikeEfficacyChart:
     @staticmethod
     def _add_noise_labels(ax, df: pd.DataFrame, noise_series: pd.Series) -> None:
         """Add noise percentage labels."""
-        for i, noise in enumerate(noise_series):
+        for i, (idx, noise) in enumerate(noise_series.items()):
             total_width = float(df.iloc[i].sum())
             ax.text(total_width, i, f'  {int(noise)}% noise', va='center', ha='left', fontsize=10)
 

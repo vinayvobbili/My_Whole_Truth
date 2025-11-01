@@ -15,7 +15,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from my_config import get_config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 eastern = timezone('US/Eastern')
 config = get_config()
@@ -289,8 +289,8 @@ def make_chart():
 
     query = f'type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
 
-    incident_fetcher = TicketHandler()
-    tickets = incident_fetcher.get_tickets(query=query)
+    prod_incident_fetcher = TicketHandler(XsoarEnvironment.PROD)
+    tickets = prod_incident_fetcher.get_tickets(query=query)
     tickets_by_periods = get_tickets_by_periods(tickets)
     save_sla_breaches_chart(tickets_by_periods, period_label)
 

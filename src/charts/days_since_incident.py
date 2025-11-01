@@ -1,6 +1,6 @@
 import logging
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytesseract
@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import my_config as config
-from services.xsoar import TicketHandler
+from services.xsoar import TicketHandler, XsoarEnvironment
 
 eastern = pytz.timezone('US/Eastern')
 config = config.get_config()
@@ -160,7 +160,8 @@ def get_last_incident_details():
     end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = f'type:{config.team_name} impact:"Malicious True Positive" created:>={start_str} created:<={end_str}'
-    ticket = TicketHandler().get_tickets(query=query, size=1)
+    prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
+    ticket = prod_ticket_handler.get_tickets(query=query, size=1)
 
     if ticket:  # Check if any tickets were returned
         latest_incident_create_date_str = ticket[0].get('created')
