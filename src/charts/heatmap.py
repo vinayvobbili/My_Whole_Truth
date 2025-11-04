@@ -64,8 +64,8 @@ def create_choropleth_map():
     end_str = end_date.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     query = f'status:closed type:{config.team_name} -owner:"" created:>={start_str} created:<={end_str}'
-    tickets = prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
-    return prod_prod_ticket_handler.get_tickets(query=query)
+    prod_ticket_handler = TicketHandler(XsoarEnvironment.PROD)
+    tickets = prod_ticket_handler.get_tickets(query=query)
     ticket_counts_by_country = {}
 
     for ticket in tickets:
