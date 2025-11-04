@@ -122,5 +122,7 @@
   ".*Excessive Failed Attempts to Access a Network Shared Resource From a Compromised Host.*": "Excessive Failed Attempts to Access Network Shared Resource",
   ".*_AE_ESXi - Member Added To Veeam or ESX Administrators Group.*": "ESXi - Member Added To Veeam or ESX Administrators Group",
   ".*_AE_Unusual Command Line Activity on Vulnerable NetScaler Device \\(Updated\\).*": "Unusual Command Line Activity on Vulnerable NetScaler Device",
-  ".*_AE_T07\\.U018\\.R229\\.Windows Credential Dumping Activities Detected\\.TA0006\\.T1003.*": "Windows Credential Dumping Activities Detected"
+  ".*_AE_T07\\.U018\\.R229\\.Windows Credential Dumping Activities Detected\\.TA0006\\.T1003.*": "Windows Credential Dumping Activities Detected",
+  "_AE_FIRM_LinkedIn_File_Upload_Detected": "FIRM LinkedIn File Upload Detected",
+  "AE_Entra ID - Cloud Native User Attempted to Add or Remove Role": "Entra ID - Cloud Native User Attempted to Add or Remove Role"
 }
