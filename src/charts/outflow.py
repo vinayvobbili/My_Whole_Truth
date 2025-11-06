@@ -386,7 +386,7 @@ def create_graph(tickets, period_label="Yesterday"):
     plt.subplots_adjust(top=0.88, bottom=0.15, left=0.20, right=0.73)
 
     today_date = datetime.now().strftime('%m-%d-%Y')
-    output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow.png"
+    output_path = ROOT_DIRECTORY / "web" / "static" / "charts" / today_date / "Outflow Yesterday.png"
     output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
     plt.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.0, dpi=300)
     plt.close(fig)
