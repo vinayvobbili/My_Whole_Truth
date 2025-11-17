@@ -5,7 +5,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+import logging
 import time
+
+# Configure logging to see progress updates
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any
@@ -975,7 +982,11 @@ def make_chart() -> None:
 
     query = f'type:{generator.config.team_name} -owner:"" created:>{start_str}'
     print(f"Fetching 12-month tickets with pagination...")
+    print(f"Query: {query}")
+    print(f"Date range: {start_str} to now")
+    print(f"This may take several minutes depending on the number of tickets...")
     tickets = generator.prod_ticket_handler.get_tickets(query=query, paginate=True)
+    print(f"✓ Fetched {len(tickets)} tickets")
 
     if not tickets:
         print("No tickets found for Past 12 Months.")
