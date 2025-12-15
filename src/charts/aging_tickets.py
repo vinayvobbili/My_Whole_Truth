@@ -29,6 +29,9 @@ sys.path.insert(0, str(project_root))
 
 import my_config as config
 
+from my_config import get_config
+CONFIG = get_config()
+
 config = config.get_config()
 
 # Configure logging
@@ -386,7 +389,7 @@ def generate_daily_summary(tickets: List[Dict[Any, Any]]) -> Optional[str]:
             return pd.DataFrame(columns=['Owner', 'Count', 'Average Age (days)']).to_markdown(index=False)
 
         df = pd.DataFrame(tickets)
-        df['owner'] = df['owner'].astype(str).str.replace('@company.com', '', regex=False)
+        df['owner'] = df['owner'].astype(str).str.replace(f'@{CONFIG.my_web_domain}', '', regex=False)
         df['created'] = pd.to_datetime(df['created'], errors='coerce')
         df = df.dropna(subset=['created'])
 

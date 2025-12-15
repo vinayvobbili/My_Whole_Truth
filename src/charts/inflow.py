@@ -198,8 +198,8 @@ class DataProcessor:
         df['severity'] = df['severity'].fillna('Unknown')
 
         df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
-        # Remove METCIRT prefix from ticket type names
-        df['ticket_type'] = df['ticket_type'].str.replace(r'^METCIRT\s*', '', regex=True)
+        # Remove {CONFIG.team_name} prefix from ticket type names
+        df['ticket_type'] = df['ticket_type'].str.replace(r'^{CONFIG.team_name}\s*', '', regex=True)
         # Shorten long ticket type names
         df['ticket_type'] = df['ticket_type'].replace({
             'CrowdStrike Falcon Detection': 'Crowdstrike Detection',
@@ -578,8 +578,8 @@ class TicketChartGenerator:
         # Process ticket type
         df['ticket_type'] = df['type'].fillna('Unknown')
         df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
-        # Remove METCIRT prefix from ticket type names
-        df['ticket_type'] = df['ticket_type'].str.replace(r'^METCIRT\s*', '', regex=True)
+        # Remove {CONFIG.team_name} prefix from ticket type names
+        df['ticket_type'] = df['ticket_type'].str.replace(r'^{CONFIG.team_name}\s*', '', regex=True)
         # Shorten long ticket type names
         df['ticket_type'] = df['ticket_type'].replace({
             'CrowdStrike Falcon Detection': 'Crowdstrike Detection',
