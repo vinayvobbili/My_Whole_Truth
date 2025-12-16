@@ -71,7 +71,7 @@ def generate_chart(tickets):
     fig, ax = plt.subplots(1, 1, figsize=(22, 14), facecolor='#f8f9fa')
     fig.patch.set_facecolor('#f8f9fa')
 
-    # Enhanced titles with MetLife branding
+    # Enhanced titles with company branding
     plt.suptitle('Vectra',
                  fontsize=24, fontweight='bold', color='#1A237E', y=0.96)
     ax.set_title(f'{len(tickets)} Tickets from past 3 months',
@@ -89,7 +89,7 @@ def generate_chart(tickets):
                 ax.text(x_pos, y_pos, str(count), ha='center', va='center', color='black' if impact in ("Ignore", "Testing", "False Positive") else 'white', fontsize=10, fontweight='bold')
         bottom = [b + c for b, c in zip(bottom, counts)]
 
-    # Enhanced legend with MetLife styling - positioned outside chart area
+    # Enhanced legend with company styling - positioned outside chart area
     legend = ax.legend(title='Impact', bbox_to_anchor=(1.02, 1), loc='upper left',
                        fontsize=12, title_fontsize=14, frameon=True, fancybox=True, shadow=True)
     legend.get_frame().set_facecolor('white')
@@ -125,7 +125,7 @@ def generate_chart(tickets):
     plt.tight_layout()
     plt.subplots_adjust(top=0.88, bottom=0.12, left=0.08, right=0.85)
 
-    # Add MetLife branding elements
+    # Add company branding elements
     from matplotlib.patches import FancyBboxPatch
 
     # Add decorative border

@@ -3,6 +3,9 @@ from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+
+from my_config import get_config
+CONFIG = get_config()
 import numpy as np
 from matplotlib.patches import FancyArrow
 
@@ -182,9 +185,9 @@ def create_definitions_table(plt):
     threat_details = [
         ["Level", "Description"],
         ["GREEN", "No known significant threats or on-going attacks"],
-        ["YELLOW", "There are global threats and/or non-specific threats which could affect MetLife"],
-        ["ORANGE", "There are known threats which are specifically targeting MetLife"],
-        ["RED", "There is an ongoing attack confirmed to be targeting MetLife"]
+        ["YELLOW", f"There are global threats and/or non-specific threats which could affect {CONFIG.company_name}"],
+        ["ORANGE", f"There are known threats which are specifically targeting {CONFIG.company_name}"],
+        ["RED", f"There is an ongoing attack confirmed to be targeting {CONFIG.company_name}"]
     ]
 
     # Create table
