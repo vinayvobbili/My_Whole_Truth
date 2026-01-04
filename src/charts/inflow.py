@@ -7,6 +7,7 @@ sys.path.insert(0, str(project_root))
 
 import logging
 import os
+import re
 import time
 
 # Configure logging - use DEBUG if DEBUG_LOGS env var is set, otherwise INFO
@@ -27,6 +28,9 @@ from matplotlib import transforms
 
 from my_config import get_config
 from services.xsoar import TicketHandler, XsoarEnvironment
+
+# Module-level config for use in static methods
+CONFIG = get_config()
 
 
 @dataclass
@@ -198,8 +202,8 @@ class DataProcessor:
         df['severity'] = df['severity'].fillna('Unknown')
 
         df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
-        # Remove {CONFIG.team_name} prefix from ticket type names
-        df['ticket_type'] = df['ticket_type'].str.replace(r'^{CONFIG.team_name}\s*', '', regex=True)
+        # Remove {CONFIG.team_name} prefix from ticket type names (case-insensitive)
+        df['ticket_type'] = df['ticket_type'].str.replace(rf'^{CONFIG.team_name}\s*', '', regex=True, flags=re.IGNORECASE)
         # Shorten long ticket type names
         df['ticket_type'] = df['ticket_type'].replace({
             'CrowdStrike Falcon Detection': 'Crowdstrike Detection',
@@ -578,8 +582,8 @@ class TicketChartGenerator:
         # Process ticket type
         df['ticket_type'] = df['type'].fillna('Unknown')
         df['ticket_type'] = df['ticket_type'].replace('', 'Unknown')
-        # Remove {CONFIG.team_name} prefix from ticket type names
-        df['ticket_type'] = df['ticket_type'].str.replace(r'^{CONFIG.team_name}\s*', '', regex=True)
+        # Remove {CONFIG.team_name} prefix from ticket type names (case-insensitive)
+        df['ticket_type'] = df['ticket_type'].str.replace(rf'^{CONFIG.team_name}\s*', '', regex=True, flags=re.IGNORECASE)
         # Shorten long ticket type names
         df['ticket_type'] = df['ticket_type'].replace({
             'CrowdStrike Falcon Detection': 'Crowdstrike Detection',
