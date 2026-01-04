@@ -149,17 +149,24 @@ def create_graph(tickets, period_label="Yesterday"):
     for pattern, replacement in detection_source_codes_by_name.items():
         df['source'] = df['source'].str.replace(pattern, replacement, regex=True, flags=re.IGNORECASE)
 
-    df['source'] = df.apply(lambda row: row['type']
-                            .replace(config.team_name, '').strip()
-                            .replace('CrowdStrike Falcon Detection', 'CS Detection').strip()
-                            .replace('CrowdStrike Falcon Incident', 'CS Incident').strip()
-                            .replace('Prisma Cloud Compute Runtime Alert', 'Prisma Compute').strip()
-                            .replace('Prisma Cloud Runtime Alert', 'Prisma Runtime').strip()
-                            .replace('Lost or Stolen Computer', 'Lost/Stolen Device').strip()
-                            .replace('Employee Reported Incident', 'Employee Report').strip()
-                            .replace('UEBA Prisma Cloud', 'UEBA Prisma').strip()
-                            .replace('Leaked Credentials', 'Leaked Creds').strip(),
-                            axis=1)
+    # Use case-insensitive regex replacement for team name
+    team_name_pattern = re.compile(re.escape(config.team_name), re.IGNORECASE) if config.team_name else None
+
+    def process_source(row):
+        # First strip team name (case-insensitive)
+        source = team_name_pattern.sub('', row['type']).strip() if team_name_pattern else row['type']
+        # Then apply all the replacements
+        source = source.replace('CrowdStrike Falcon Detection', 'CS Detection')
+        source = source.replace('CrowdStrike Falcon Incident', 'CS Incident')
+        source = source.replace('Prisma Cloud Compute Runtime Alert', 'Prisma Compute')
+        source = source.replace('Prisma Cloud Runtime Alert', 'Prisma Runtime')
+        source = source.replace('Lost or Stolen Computer', 'Lost/Stolen Device')
+        source = source.replace('Employee Reported Incident', 'Employee Report')
+        source = source.replace('UEBA Prisma Cloud', 'UEBA Prisma')
+        source = source.replace('Leaked Credentials', 'Leaked Creds')
+        return source.strip()
+
+    df['source'] = df.apply(process_source, axis=1)
 
     # Count the occurrences of each source and impact
     source_impact_counts = df.groupby(['source', 'impact']).size().reset_index(name='count')
