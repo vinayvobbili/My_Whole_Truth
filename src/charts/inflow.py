@@ -127,7 +127,7 @@ class ColorSchemes:
 
 
 def add_watermark(fig):
-    """Add GS-DnR watermark to bottom right."""
+    """Add GS-IR watermark to bottom right."""
     fig.text(0.99, 0.01, 'GS-DnR', ha='right', va='bottom',
              fontsize=10, alpha=0.7, color='#3F51B5',
              style='italic', fontweight='bold')
@@ -737,6 +737,318 @@ class TicketChartGenerator:
         self._finalize_and_save_chart(fig, "Inflow Past 12 Months - By Hour of Day.png")
         return time.time() - start_time
 
+    def generate_open_vs_closed_chart(self, tickets_12_month: List[Dict[str, Any]]) -> float:
+        """Generate Open Tickets vs Closed Incidents chart for the past 60 days.
+
+        Shows grouped bars with:
+        - Closed Incidents (orange): tickets closed on each day
+        - Open Tickets (blue with dashed border): tickets still open at end of each day
+        - 2-period moving average line for Open Tickets
+
+        Args:
+            tickets_12_month: Pre-fetched 12-month tickets to filter from
+        """
+        start_time = time.time()
+
+        # Calculate exact 60-day window
+        end_date = datetime.now(self.eastern).replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date = end_date - timedelta(days=60)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Convert to UTC for comparison
+        start_utc = start_date.astimezone(pytz.utc)
+        end_utc = end_date.astimezone(pytz.utc)
+
+        # Filter tickets created within the window or still relevant
+        # (created before end_date AND (not closed OR closed after start_date))
+        relevant_tickets = []
+        for t in tickets_12_month:
+            created_dt = pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC')
+            if created_dt <= end_utc:
+                relevant_tickets.append(t)
+
+        if not relevant_tickets:
+            print("No tickets found for Open vs Closed chart.")
+            return time.time() - start_time
+
+        # Create DataFrame for processing
+        df = pd.DataFrame(relevant_tickets)
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')
+        df['created_date'] = df['created_dt'].dt.date
+
+        # Parse closed date - handle various formats
+        def parse_closed_date(val):
+            if pd.isna(val) or val is None or val == '' or val == 0:
+                return None
+            try:
+                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC').date()
+            except Exception:
+                return None
+
+        df['closed_date'] = df['closed'].apply(parse_closed_date)
+
+        # Extract impact field for incident filtering
+        df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', '') if isinstance(x, dict) else '')
+
+        # Generate list of dates for the 60-day window
+        date_range = pd.date_range(start=start_date.date(), end=end_date.date(), freq='D')
+        dates = [d.date() for d in date_range]
+
+        # Calculate metrics for each day
+        closed_counts = []
+        open_counts = []
+
+        for day in dates:
+            # Closed Incidents: tickets closed on this day with impact='Malicious True Positive'
+            closed_on_day = df[
+                (df['closed_date'] == day) &
+                (df['impact'] == 'Malicious True Positive')
+            ].shape[0]
+            closed_counts.append(closed_on_day)
+
+            # Open Tickets: tickets that were open at the end of this day
+            # (created on or before this day) AND (not closed OR closed after this day)
+            open_on_day = df[
+                (df['created_date'] <= day) &
+                ((df['closed_date'].isna()) | (df['closed_date'] > day))
+            ].shape[0]
+            open_counts.append(open_on_day)
+
+        # Calculate 2-period moving average for Open Tickets
+        open_series = pd.Series(open_counts)
+        moving_avg = open_series.rolling(window=2, min_periods=1).mean()
+
+        # Create the chart - wide format like Excel reference
+        fig, ax = plt.subplots(figsize=(28, 8), facecolor=self.chart_config.background_color)
+        fig.patch.set_facecolor(self.chart_config.background_color)
+        self.styler.apply_base_styling(fig, ax)
+
+        # Set up x positions for grouped bars
+        x = np.arange(len(dates))
+        bar_width = 0.4
+
+        # Plot Closed Incidents bars (orange, solid)
+        bars_closed = ax.bar(x - bar_width/2, closed_counts, bar_width,
+                             label='Closed Incidents', color='#FF9800',
+                             edgecolor='#E65100', linewidth=1.5, alpha=0.9)
+
+        # Plot Open Tickets bars (blue with solid border)
+        bars_open = ax.bar(x + bar_width/2, open_counts, bar_width,
+                           label='Open Tickets', color='#2196F3',
+                           edgecolor='#0D47A1', linewidth=1.5, alpha=0.9)
+
+        # Add 2-period moving average line (dotted)
+        ax.plot(x + bar_width/2, moving_avg.values, color='#0D47A1',
+                linestyle=':', linewidth=2.5, marker='',
+                label='2 per. Mov. Avg. (Open Tickets)', alpha=0.8)
+
+        # Add value labels on bars
+        for i, (closed, opened) in enumerate(zip(closed_counts, open_counts)):
+            # Closed count label
+            if closed > 0:
+                ax.text(x[i] - bar_width/2, closed + 0.5, f'{closed}',
+                        ha='center', va='bottom', fontsize=8, fontweight='bold',
+                        color='#E65100')
+            else:
+                ax.text(x[i] - bar_width/2, 0.5, '0',
+                        ha='center', va='bottom', fontsize=7, color='#9E9E9E')
+
+            # Open count label
+            ax.text(x[i] + bar_width/2, opened + 0.5, f'{opened}',
+                    ha='center', va='bottom', fontsize=8, fontweight='bold',
+                    color='#0D47A1')
+
+        # Configure axes
+        ax.set_xticks(x)
+        date_labels = [d.strftime('%d-%b') for d in dates]
+        ax.set_xticklabels(date_labels, rotation=90, ha='center', fontsize=8,
+                           color=self.chart_config.border_color)
+
+        max_val = max(max(closed_counts), max(open_counts)) if open_counts else 10
+        ax.set_ylim(0, max_val * 1.15)
+
+        ax.tick_params(axis='y', colors=self.chart_config.border_color, labelsize=10)
+        ax.tick_params(axis='x', colors=self.chart_config.border_color, pad=5)
+        ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
+        # Title and labels
+        ax.set_title("Open Tickets Vs Closed Incidents - last 60 days",
+                     fontweight='bold', fontsize=20, color=self.chart_config.border_color, pad=20)
+        ax.set_xlabel("Date", fontweight='bold', fontsize=12,
+                      color=self.chart_config.border_color, labelpad=10)
+        ax.set_ylabel("Count", fontweight='bold', fontsize=12,
+                      color=self.chart_config.border_color)
+
+        # Legend
+        legend = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
+                           ncol=3, frameon=True, fancybox=True, shadow=True,
+                           fontsize=11)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.95)
+        legend.get_frame().set_edgecolor(self.chart_config.border_color)
+        legend.get_frame().set_linewidth(2)
+
+        # Custom finalization with tight margins for wide chart
+        from matplotlib.patches import FancyBboxPatch
+        fig.patch.set_edgecolor('none')
+        fig.patch.set_linewidth(0)
+
+        fancy_box = FancyBboxPatch(
+            (0, 0), width=1.0, height=1.0,
+            boxstyle="round,pad=0,rounding_size=0.01",
+            edgecolor='#1A237E', facecolor='none', linewidth=2,
+            transform=fig.transFigure, zorder=1000, clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
+        self.styler.add_timestamp(fig)
+        add_watermark(fig)
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.88, bottom=0.16, left=0.03, right=0.99)
+
+        output_path = self.output_dir / "Open vs Closed - Past 60 Days.png"
+        plt.savefig(output_path, format='png', bbox_inches=None, pad_inches=0.0, dpi=300, facecolor='#f8f9fa')
+        plt.close(fig)
+        return time.time() - start_time
+
+    def generate_open_vs_closed_12month_chart(self, tickets_12_month: List[Dict[str, Any]]) -> float:
+        """Generate Opened Tickets vs Closed Incidents chart for the past 12 months.
+
+        Shows grouped bars with:
+        - Closed (blue): tickets closed each month
+        - Open (red/maroon): tickets opened/created each month
+
+        Args:
+            tickets_12_month: Pre-fetched 12-month tickets data
+        """
+        start_time = time.time()
+
+        if not tickets_12_month:
+            print("No tickets found for Open vs Closed 12-month chart.")
+            return time.time() - start_time
+
+        # Create DataFrame for processing
+        df = pd.DataFrame(tickets_12_month)
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')
+        df['created_month'] = df['created_dt'].dt.to_period('M')
+
+        # Parse closed date
+        def parse_closed_date(val):
+            if pd.isna(val) or val is None or val == '' or val == 0:
+                return None
+            try:
+                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC')
+            except Exception:
+                return None
+
+        df['closed_dt'] = df['closed'].apply(parse_closed_date)
+        df['closed_month'] = df['closed_dt'].dt.to_period('M')
+
+        # Extract impact field for incident filtering
+        df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', '') if isinstance(x, dict) else '')
+
+        # Get expected months (past 12 months)
+        expected_months = _get_expected_months()
+        month_labels = [month.strftime('%b-%y') for month in expected_months]
+
+        # Calculate opened and closed incident counts per month
+        opened_counts = []
+        closed_counts = []
+
+        for month in expected_months:
+            # Opened: tickets created in this month
+            opened = df[df['created_month'] == month].shape[0]
+            opened_counts.append(opened)
+
+            # Closed Incidents: tickets closed in this month with impact='Malicious True Positive'
+            closed = df[
+                (df['closed_month'] == month) &
+                (df['impact'] == 'Malicious True Positive')
+            ].shape[0]
+            closed_counts.append(closed)
+
+        # Create the chart
+        fig, ax = plt.subplots(figsize=(14, 10), facecolor=self.chart_config.background_color)
+        fig.patch.set_facecolor(self.chart_config.background_color)
+        self.styler.apply_base_styling(fig, ax)
+
+        # Set up x positions for grouped bars
+        x = np.arange(len(expected_months))
+        bar_width = 0.35
+
+        # Plot Closed bars (blue)
+        bars_closed = ax.bar(x - bar_width/2, closed_counts, bar_width,
+                             label='Closed', color='#4472C4',
+                             edgecolor='#2F5496', linewidth=1, alpha=0.9)
+
+        # Plot Open bars (red/maroon)
+        bars_open = ax.bar(x + bar_width/2, opened_counts, bar_width,
+                           label='Open', color='#C55A5A',
+                           edgecolor='#8B3A3A', linewidth=1, alpha=0.9)
+
+        # Add value labels on bars
+        for i, (closed, opened) in enumerate(zip(closed_counts, opened_counts)):
+            # Closed count label
+            ax.text(x[i] - bar_width/2, closed + 5, f'{closed}',
+                    ha='center', va='bottom', fontsize=10, fontweight='bold',
+                    color='#2F5496')
+
+            # Open count label
+            ax.text(x[i] + bar_width/2, opened + 5, f'{opened}',
+                    ha='center', va='bottom', fontsize=10, fontweight='bold',
+                    color='#8B3A3A', fontstyle='italic')
+
+        # Configure axes
+        ax.set_xticks(x)
+        ax.set_xticklabels(month_labels, rotation=0, ha='center', fontsize=10,
+                           color=self.chart_config.border_color)
+
+        max_val = max(max(closed_counts) if closed_counts else 0,
+                      max(opened_counts) if opened_counts else 0)
+        ax.set_ylim(-10, max_val * 1.15)
+
+        ax.tick_params(axis='y', colors=self.chart_config.border_color, labelsize=10)
+        ax.tick_params(axis='x', colors=self.chart_config.border_color, pad=5)
+        ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
+        # Title
+        ax.set_title("Opened Tickets vs Closed Incidents - 12 Month trend",
+                     fontweight='bold', fontsize=18, color='#C55A5A', pad=20)
+
+        # Legend at bottom center
+        legend = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08),
+                           ncol=2, frameon=True, fancybox=True, shadow=True,
+                           fontsize=11)
+        legend.get_frame().set_facecolor('white')
+        legend.get_frame().set_alpha(0.95)
+        legend.get_frame().set_edgecolor(self.chart_config.border_color)
+        legend.get_frame().set_linewidth(1)
+
+        # Custom finalization with tight margins
+        from matplotlib.patches import FancyBboxPatch
+        fig.patch.set_edgecolor('none')
+        fig.patch.set_linewidth(0)
+
+        fancy_box = FancyBboxPatch(
+            (0, 0), width=1.0, height=1.0,
+            boxstyle="round,pad=0,rounding_size=0.01",
+            edgecolor='#1A237E', facecolor='none', linewidth=2,
+            transform=fig.transFigure, zorder=1000, clip_on=False
+        )
+        fig.patches.append(fancy_box)
+
+        self.styler.add_timestamp(fig)
+        add_watermark(fig)
+
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.90, bottom=0.12, left=0.06, right=0.98)
+
+        output_path = self.output_dir / "Open vs Closed - 12 Month Trend.png"
+        plt.savefig(output_path, format='png', bbox_inches=None, pad_inches=0.0, dpi=300, facecolor='#f8f9fa')
+        plt.close(fig)
+        return time.time() - start_time
+
     def _get_yesterday_range(self) -> Tuple[str, str]:
         """Get yesterday's date range in UTC. On Mondays, includes both Saturday and Sunday."""
         now = datetime.now(self.eastern).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -969,6 +1281,8 @@ class TicketChartGenerator:
             self.generate_12_month_type_chart(tickets_12_month)
             self.generate_day_of_week_chart(tickets_12_month)
             self.generate_hour_of_day_chart(tickets_12_month)
+            self.generate_open_vs_closed_chart(tickets_12_month)
+            self.generate_open_vs_closed_12month_chart(tickets_12_month)
 
             print("All charts generated successfully")
         except Exception as e:

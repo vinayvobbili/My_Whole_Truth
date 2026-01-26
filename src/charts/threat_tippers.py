@@ -292,7 +292,7 @@ def generate_threat_tipper_chart(tippers):
              bbox=dict(boxstyle="round,pad=0.4", facecolor='white', alpha=0.9,
                        edgecolor='#1A237E', linewidth=1.5))
 
-    # Add GS-DnR branding
+    # Add GS-IR branding
     fig.text(0.98, 0.02, 'GS-DnR', ha='right', va='bottom', fontsize=10,
              alpha=0.7, color='#3F51B5', style='italic', fontweight='bold')
 
@@ -370,7 +370,7 @@ def generate_threat_tipper_chart(tippers):
 def make_chart():
     try:
         threat_tippers = azdo.get_stories_from_area_path(azdo_area_paths['threat_hunting'])
-        # print thippers that don't have one of these tags - Info, Low, Mediium, High, Critical. Set a default tag of Info
+        # print tippers that don't have one of these tags - Info, Low, Mediium, High, Critical. Set a default tag of Info
         for tipper in threat_tippers:
             tags = tipper.fields.get('System.Tags', '')
             if not any(tag in tags for tag in ['Info', 'Low', 'Medium', 'High', 'Critical']):
