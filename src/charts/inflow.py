@@ -219,7 +219,7 @@ class DataProcessor:
     def process_tickets_for_period(tickets: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, List[Any]]:
         """Process tickets for period analysis."""
         df = pd.DataFrame(tickets)
-        df['created_date'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.date
+        df['created_date'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.date  # type: ignore[union-attr]
         df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
         df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
 
@@ -469,7 +469,7 @@ class TicketChartGenerator:
         # Filter tickets by created date
         tickets = [
             t for t in tickets_12_month
-            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC') < end_dt
+            if start_dt <= pd.Timestamp(t['created']).tz_convert('UTC') < end_dt
         ]
 
         if not tickets:
@@ -508,10 +508,13 @@ class TicketChartGenerator:
         start_dt = datetime.strptime(start_str, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.utc)
         end_dt = datetime.strptime(end_str, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.utc)
 
-        # Filter tickets by created date
+        # Filter tickets by created date, exclude specific ticket types, and exclude duplicates
+        excluded_types = {f'{CONFIG.team_name} IOC Hunt', f'{CONFIG.team_name} Lost or Stolen Computer'}
         tickets = [
             t for t in tickets_12_month
-            if start_dt <= pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC') <= end_dt
+            if start_dt <= pd.Timestamp(t['created']).tz_convert('UTC') <= end_dt
+            and t.get('type', '') not in excluded_types
+            and t.get('closeReason', '') != 'Duplicate'
         ]
 
         if not tickets:
@@ -544,8 +547,8 @@ class TicketChartGenerator:
             return time.time() - start_time
 
         df = pd.DataFrame(tickets)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')
-        df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')  # type: ignore[union-attr]
+        df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')  # type: ignore[union-attr]
         df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', 'Unknown'))
         df['impact'] = df['impact'].fillna('Unknown').replace('', 'Unknown')
         df['impact'] = df['impact'].apply(
@@ -576,8 +579,8 @@ class TicketChartGenerator:
             return time.time() - start_time
 
         df = pd.DataFrame(tickets)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')
-        df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert('UTC')  # type: ignore[union-attr]
+        df['created_month'] = df['created_dt'].dt.tz_localize(None).dt.to_period('M')  # type: ignore[union-attr]
 
         # Process ticket type
         df['ticket_type'] = df['type'].fillna('Unknown')
@@ -619,8 +622,8 @@ class TicketChartGenerator:
 
         # Convert to dataframe and extract day of week
         df = pd.DataFrame(tickets)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert(self.eastern)
-        df['day_of_week'] = df['created_dt'].dt.day_name()
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert(self.eastern)  # type: ignore[union-attr]
+        df['day_of_week'] = df['created_dt'].dt.day_name()  # type: ignore[union-attr]
 
         # Count tickets by day of week
         day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -685,8 +688,8 @@ class TicketChartGenerator:
 
         # Convert to dataframe and extract hour
         df = pd.DataFrame(tickets)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert(self.eastern)
-        df['hour'] = df['created_dt'].dt.hour
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601', errors='coerce').dt.tz_convert(self.eastern)  # type: ignore[union-attr]
+        df['hour'] = df['created_dt'].dt.hour  # type: ignore[union-attr]
 
         # Count tickets by hour (0-23)
         hour_counts = df['hour'].value_counts().reindex(range(24), fill_value=0).sort_index()
@@ -756,14 +759,13 @@ class TicketChartGenerator:
         start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Convert to UTC for comparison
-        start_utc = start_date.astimezone(pytz.utc)
         end_utc = end_date.astimezone(pytz.utc)
 
         # Filter tickets created within the window or still relevant
         # (created before end_date AND (not closed OR closed after start_date))
         relevant_tickets = []
         for t in tickets_12_month:
-            created_dt = pd.to_datetime(t['created'], format='ISO8601').tz_convert('UTC')
+            created_dt = pd.Timestamp(t['created']).tz_convert('UTC')
             if created_dt <= end_utc:
                 relevant_tickets.append(t)
 
@@ -773,16 +775,16 @@ class TicketChartGenerator:
 
         # Create DataFrame for processing
         df = pd.DataFrame(relevant_tickets)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')
-        df['created_date'] = df['created_dt'].dt.date
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')  # type: ignore[union-attr]
+        df['created_date'] = df['created_dt'].dt.date  # type: ignore[union-attr]
 
         # Parse closed date - handle various formats
         def parse_closed_date(val):
             if pd.isna(val) or val is None or val == '' or val == 0:
                 return None
             try:
-                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC').date()
-            except Exception:
+                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC').date()  # type: ignore[union-attr]
+            except (ValueError, TypeError):
                 return None
 
         df['closed_date'] = df['closed'].apply(parse_closed_date)
@@ -801,7 +803,7 @@ class TicketChartGenerator:
         for day in dates:
             # Closed Incidents: tickets closed on this day with impact='Malicious True Positive'
             closed_on_day = df[
-                (df['closed_date'] == day) &
+                (df['closed_date'] == day) &  # type: ignore[operator]
                 (df['impact'] == 'Malicious True Positive')
             ].shape[0]
             closed_counts.append(closed_on_day)
@@ -809,8 +811,8 @@ class TicketChartGenerator:
             # Open Tickets: tickets that were open at the end of this day
             # (created on or before this day) AND (not closed OR closed after this day)
             open_on_day = df[
-                (df['created_date'] <= day) &
-                ((df['closed_date'].isna()) | (df['closed_date'] > day))
+                (df['created_date'] <= day) &  # type: ignore[operator]
+                ((df['closed_date'].isna()) | (df['closed_date'] > day))  # type: ignore[operator]
             ].shape[0]
             open_counts.append(open_on_day)
 
@@ -828,14 +830,14 @@ class TicketChartGenerator:
         bar_width = 0.4
 
         # Plot Closed Incidents bars (orange, solid)
-        bars_closed = ax.bar(x - bar_width/2, closed_counts, bar_width,
-                             label='Closed Incidents', color='#FF9800',
-                             edgecolor='#E65100', linewidth=1.5, alpha=0.9)
+        ax.bar(x - bar_width/2, closed_counts, bar_width,
+               label='Closed Incidents', color='#FF9800',
+               edgecolor='#E65100', linewidth=1.5, alpha=0.9)
 
         # Plot Open Tickets bars (blue with solid border)
-        bars_open = ax.bar(x + bar_width/2, open_counts, bar_width,
-                           label='Open Tickets', color='#2196F3',
-                           edgecolor='#0D47A1', linewidth=1.5, alpha=0.9)
+        ax.bar(x + bar_width/2, open_counts, bar_width,
+               label='Open Tickets', color='#2196F3',
+               edgecolor='#0D47A1', linewidth=1.5, alpha=0.9)
 
         # Add 2-period moving average line (dotted)
         ax.plot(x + bar_width/2, moving_avg.values, color='#0D47A1',
@@ -930,20 +932,20 @@ class TicketChartGenerator:
 
         # Create DataFrame for processing
         df = pd.DataFrame(tickets_12_month)
-        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')
-        df['created_month'] = df['created_dt'].dt.to_period('M')
+        df['created_dt'] = pd.to_datetime(df['created'], format='ISO8601').dt.tz_convert('UTC')  # type: ignore[union-attr]
+        df['created_month'] = df['created_dt'].dt.to_period('M')  # type: ignore[union-attr]
 
         # Parse closed date
         def parse_closed_date(val):
             if pd.isna(val) or val is None or val == '' or val == 0:
                 return None
             try:
-                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC')
-            except Exception:
+                return pd.to_datetime(val, format='ISO8601').tz_convert('UTC')  # type: ignore[union-attr]
+            except (ValueError, TypeError):
                 return None
 
         df['closed_dt'] = df['closed'].apply(parse_closed_date)
-        df['closed_month'] = df['closed_dt'].dt.to_period('M')
+        df['closed_month'] = df['closed_dt'].dt.to_period('M')  # type: ignore[union-attr]
 
         # Extract impact field for incident filtering
         df['impact'] = df['CustomFields'].apply(lambda x: x.get('impact', '') if isinstance(x, dict) else '')
@@ -978,14 +980,14 @@ class TicketChartGenerator:
         bar_width = 0.35
 
         # Plot Closed bars (blue)
-        bars_closed = ax.bar(x - bar_width/2, closed_counts, bar_width,
-                             label='Closed', color='#4472C4',
-                             edgecolor='#2F5496', linewidth=1, alpha=0.9)
+        ax.bar(x - bar_width/2, closed_counts, bar_width,
+               label='Closed', color='#4472C4',
+               edgecolor='#2F5496', linewidth=1, alpha=0.9)
 
         # Plot Open bars (red/maroon)
-        bars_open = ax.bar(x + bar_width/2, opened_counts, bar_width,
-                           label='Open', color='#C55A5A',
-                           edgecolor='#8B3A3A', linewidth=1, alpha=0.9)
+        ax.bar(x + bar_width/2, opened_counts, bar_width,
+               label='Open', color='#C55A5A',
+               edgecolor='#8B3A3A', linewidth=1, alpha=0.9)
 
         # Add value labels on bars
         for i, (closed, opened) in enumerate(zip(closed_counts, opened_counts)):
@@ -1285,8 +1287,9 @@ class TicketChartGenerator:
             self.generate_open_vs_closed_12month_chart(tickets_12_month)
 
             print("All charts generated successfully")
-        except Exception as e:
+        except (ValueError, TypeError, KeyError, OSError) as e:
             print(f"Error generating charts: {e}")
+            raise
 
 
 def make_chart() -> None:
